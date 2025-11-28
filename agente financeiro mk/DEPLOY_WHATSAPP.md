@@ -55,11 +55,11 @@ PORT=4000
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=seu-email@gmail.com
-EMAIL_PASSWORD=rdpdeylvodetlmnn
+EMAIL_PASSWORD=sua-senha-de-app
 EMAIL_FROM=seu-email@gmail.com
-TWILIO_ACCOUNT_SID=ACb6110291795d1edf6ae9e86372c0f79f
-TWILIO_AUTH_TOKEN=7c2cefe2d95530c199af2ce23e6f12ef
-TWILIO_FROM_NUMBER=+19086413675
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=seu_auth_token_aqui
+TWILIO_FROM_NUMBER=+5511999999999
 BASE_URL=https://microkids-backend-XXXX.onrender.com
 ```
 
