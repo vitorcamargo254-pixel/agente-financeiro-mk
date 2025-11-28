@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  descricao   String
+  codigo      String   @unique
+  centroCusto String
+  ndoc        String?
+  valor       Decimal
+  status      String   @default("PENDENTE") // "PAGO" ou "PENDENTE"
+  data        DateTime
+  saldo       Decimal?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ReminderConfig {
+  id                    Int      @id @default(autoincrement())
+  diasAntesVencimento   String   // JSON array: ["2", "0"] para 2 dias antes e no vencimento
+  telefoneDestino       String   // Número para receber ligações
+  emailDestino          String   // Email para receber notificações
+  ativo                 Boolean  @default(true)
+  enviarEmail           Boolean  @default(true)
+  fazerLigacao          Boolean  @default(true)
+  horarioLigacao        String   @default("09:00") // Horário para fazer ligações (HH:mm)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model ReminderLog {
+  id            Int      @id @default(autoincrement())
+  transactionId Int?
+  tipo          String   // "EMAIL" ou "CALL"
+  status        String   // "SUCCESS", "FAILED", "PENDING"
+  mensagem      String?
+  erro          String?
+  createdAt     DateTime @default(now())
+}
+
+

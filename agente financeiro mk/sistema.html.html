@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agente Financeiro • Microkids</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --primary:#6366F1;--secondary:#8B5CF6;--success:#10B981;--danger:#EF4444;--warning:#F59E0B;
+    }
+    .gradient-bg{background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%)}
+    .badge{padding:.15rem .5rem;border-radius:9999px;font-size:.7rem;font-weight:600;color:white;display:inline-block}
+    .badge-pago{background:var(--success)}
+    .badge-pendente{background:var(--warning)}
+    .badge-vencido{background:var(--danger)}
+    .tab-active{background:var(--primary);color:#fff}
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
+  <header class="gradient-bg text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-chart-line text-2xl"></i>
+        <h1 class="text-2xl font-bold">Agente Financeiro • Microkids</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm opacity-90">Bem-vinda!</span>
+        <div class="w-8 h-8 bg-white/20 rounded-full grid place-items-center"><i class="fa-solid fa-user"></i></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="bg-white border-b sticky top-0 z-10" role="tablist" aria-label="Navegação principal">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex gap-2 md:gap-6">
+        <button data-tab="controle" class="tab-btn tab-active px-4 md:px-6 py-3 text-sm font-medium rounded-t" role="tab"> <i class="fa-solid fa-table mr-2"></i>Controle Financeiro</button>
+        <button data-tab="dashboard" class="tab-btn px-4 md:px-6 py-3 text-sm font-medium rounded-t" role="tab"><i class="fa-solid fa-chart-pie mr-2"></i>Dashboard & Alertas</button>
+        <button data-tab="assistente" class="tab-btn px-4 md:px-6 py-3 text-sm font-medium rounded-t" role="tab"><i class="fa-solid fa-robot mr-2"></i>Assistente Inteligente</button>
+        <button data-tab="lembretes" class="tab-btn px-4 md:px-6 py-3 text-sm font-medium rounded-t" role="tab"><i class="fa-solid fa-phone mr-2"></i>Lembretes & Chamadas</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <section id="tab-controle" class="tab-panel" role="tabpanel">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl p-5 shadow">
+          <p class="text-sm text-gray-600">Total Receitas</p>
+          <p id="total-receitas" class="text-2xl font-bold text-green-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow">
+          <p class="text-sm text-gray-600">Total Despesas</p>
+          <p id="total-despesas" class="text-2xl font-bold text-red-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow">
+          <p class="text-sm text-gray-600">Saldo Líquido</p>
+          <p id="saldo-liquido" class="text-2xl font-bold text-blue-600">—</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 shadow mb-6">
+        <div class="flex flex-col md:flex-row md:items-end gap-4">
+          <div class="flex-1">
+            <label class="text-sm text-gray-600">Buscar</label>
+            <div class="relative">
+              <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+              <input id="search-input" type="text" class="w-full pl-10 pr-4 py-2 border rounded-lg" placeholder="Buscar transações, fornecedores…"/>
+            </div>
+          </div>
+          <div>
+            <label class="text-sm text-gray-600">Status</label>
+            <select id="status-filter" class="w-full px-3 py-2 border rounded-lg">
+              <option value="">Todos</option><option value="pago">Pago</option><option value="pendente">Pendente</option><option value="vencido">Vencido</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-gray-600">Categoria</label>
+            <select id="category-filter" class="w-full px-3 py-2 border rounded-lg">
+              <option value="">Todas</option><option value="10">10 - Retiradas Mensais</option><option value="13">13 - Terceirizados</option><option value="20">20 - Desp. ADM</option><option value="30">30 - Impostos</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-clear" class="px-4 py-2 bg-gray-200 rounded-lg">Limpar</button>
+            <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados com n8n"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full" role="table" aria-label="Transações financeiras">
+            <thead class="gradient-bg text-white">
+              <tr>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Data</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Descrição</th>
+                <th class="px-6 py-3 text-right text-sm font-semibold">Valor</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Categoria</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Status</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Fornecedor</th>
+                <th class="px-6 py-3 text-right text-sm font-semibold">Saldo</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-dashboard" class="tab-panel hidden" role="tabpanel">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl p-6 shadow border-l-4 border-red-500">
+          <p class="text-sm text-gray-600">Urgente</p><p id="kpi-urgente" class="text-3xl font-bold text-red-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow border-l-4 border-yellow-500">
+          <p class="text-sm text-gray-600">Vence em 2 dias</p><p id="kpi-vencer" class="text-3xl font-bold text-yellow-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow border-l-4 border-green-500">
+          <p class="text-sm text-gray-600">Pagos hoje</p><p id="kpi-pagos-hoje" class="text-3xl font-bold text-green-600">—</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-xl p-6 shadow"><h3 class="text-lg font-semibold mb-4">Gastos por Categoria</h3><div style="height:300px"><canvas id="categoryChart"></canvas></div></div>
+        <div class="bg-white rounded-xl p-6 shadow"><h3 class="text-lg font-semibold mb-4">Fluxo de Caixa Mensal</h3><div style="height:300px"><canvas id="cashFlowChart"></canvas></div></div>
+      </div>
+
+      <div class="bg-white rounded-xl p-6 shadow"><h3 class="text-lg font-semibold mb-4">Evolução Financeira</h3><div style="height:380px"><canvas id="evolutionChart"></canvas></div></div>
+
+      <!-- Cards Informativos -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-red-500">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600">Total a Pagar</h3>
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <i class="fa-solid fa-exclamation text-red-600"></i>
+            </div>
+          </div>
+          <p id="total-a-pagar" class="text-3xl font-bold text-red-600">R$ 0,00</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600">Total a Receber</h3>
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <i class="fa-solid fa-arrow-down text-green-600"></i>
+            </div>
+          </div>
+          <p id="total-a-receber" class="text-3xl font-bold text-green-600">R$ 0,00</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-blue-500">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600">Em Caixa</h3>
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <i class="fa-solid fa-piggy-bank text-blue-600"></i>
+            </div>
+          </div>
+          <p id="em-caixa" class="text-3xl font-bold text-blue-600">R$ 0,00</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-purple-500">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600">Projeção</h3>
+            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <i class="fa-solid fa-chart-line text-purple-600"></i>
+            </div>
+          </div>
+          <p id="projecao" class="text-3xl font-bold text-purple-600">R$ 0,00</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-assistente" class="tab-panel hidden" role="tabpanel">
+      <div class="bg-white rounded-xl shadow flex flex-col h-[600px]">
+        <div class="gradient-bg text-white p-3 rounded-t flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-robot"></i>
+            <strong>Assistente Financeiro Microkids</strong>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+            <span>Online</span>
+          </div>
+        </div>
+        <div id="assistant-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50"></div>
+        
+        <!-- Botões de Ação Rápida -->
+        <div class="px-4 py-3 border-t bg-white flex gap-2 justify-center flex-wrap">
+          <button id="quick-add-expense" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-plus"></i>
+            <span>Adicionar Despesa</span>
+          </button>
+          <button id="quick-mark-paid" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-check"></i>
+            <span>Marcar Pago</span>
+          </button>
+          <button id="quick-delete" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-trash"></i>
+            <span>Excluir Transação</span>
+          </button>
+          <button id="quick-reminder" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition flex items-center gap-2 text-sm">
+            <i class="fa-solid fa-bell"></i>
+            <span>Lembrete</span>
+          </button>
+        </div>
+        
+        <div class="p-3 border-t bg-white flex gap-2">
+          <input id="assistant-input" type="text" placeholder="Digite sua mensagem..." class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button id="assistant-send" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-lembretes" class="tab-panel hidden" role="tabpanel">
+      <div class="space-y-6">
+        <!-- Configurações de Lembretes -->
+        <div class="bg-white rounded-xl shadow p-6">
+          <h2 class="text-2xl font-bold mb-4 gradient-text">
+            <i class="fa-solid fa-cog mr-2"></i>Configurações de Lembretes
+          </h2>
+          
+          <form id="reminder-config-form" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <i class="fa-solid fa-phone mr-2"></i>Telefone para Ligações
+                </label>
+                <input type="text" id="config-telefone" placeholder="Ex: 27999999999" 
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                <p class="text-xs text-gray-500 mt-1">Apenas números, com DDD (ex: 27999999999)</p>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <i class="fa-solid fa-envelope mr-2"></i>E-mail para Notificações
+                </label>
+                <input type="email" id="config-email" placeholder="seu@email.com" 
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <i class="fa-solid fa-calendar-days mr-2"></i>Dias Antes do Vencimento
+                </label>
+                <input type="text" id="config-dias" placeholder="Ex: 2,0" 
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                <p class="text-xs text-gray-500 mt-1">Separe por vírgula (ex: 2,0 = 2 dias antes e no vencimento)</p>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <i class="fa-solid fa-clock mr-2"></i>Horário para Ligações
+                </label>
+                <input type="time" id="config-horario" value="09:00" 
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-4">
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="config-ativo" checked class="mr-2" />
+                <span class="text-sm font-medium">Lembretes Ativos</span>
+              </label>
+              
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="config-enviar-email" checked class="mr-2" />
+                <span class="text-sm font-medium">Enviar E-mails</span>
+              </label>
+              
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="config-fazer-ligacao" checked class="mr-2" />
+                <span class="text-sm font-medium">Fazer Ligações</span>
+              </label>
+            </div>
+            
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              <i class="fa-solid fa-save mr-2"></i>Salvar Configurações
+            </button>
+          </form>
+        </div>
+        
+        <!-- Transações Próximas do Vencimento -->
+        <div class="bg-white rounded-xl shadow p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold gradient-text">
+              <i class="fa-solid fa-bell mr-2"></i>Transações Próximas do Vencimento
+            </h2>
+            <button id="btn-process-reminders" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+              <i class="fa-solid fa-play mr-2"></i>Processar Lembretes Agora
+            </button>
+          </div>
+          
+          <div id="upcoming-transactions" class="space-y-3">
+            <p class="text-gray-500 text-center py-4">Carregando...</p>
+          </div>
+        </div>
+        
+        <!-- Histórico de Lembretes -->
+        <div class="bg-white rounded-xl shadow p-6">
+          <h2 class="text-2xl font-bold mb-4 gradient-text">
+            <i class="fa-solid fa-history mr-2"></i>Histórico de Lembretes
+          </h2>
+          
+          <div id="reminder-logs" class="space-y-2">
+            <p class="text-gray-500 text-center py-4">Carregando...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de Edição -->
+  <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="gradient-bg text-white p-4 rounded-t flex items-center justify-between">
+        <h2 class="text-xl font-bold"><i class="fa-solid fa-pen mr-2"></i>Editar Transação</h2>
+        <button id="close-edit-modal" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+      </div>
+      <form id="edit-form" class="p-6 space-y-4">
+        <input type="hidden" id="edit-codigo" />
+        <input type="hidden" id="edit-id" />
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+          <input type="date" id="edit-data" required class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+          <input type="text" id="edit-descricao" required class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+            <input type="number" id="edit-valor" step="0.01" required class="w-full px-3 py-2 border rounded-lg" />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Saldo (R$)</label>
+            <input type="number" id="edit-saldo" step="0.01" class="w-full px-3 py-2 border rounded-lg" />
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+            <input type="text" id="edit-categoria" required class="w-full px-3 py-2 border rounded-lg" />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select id="edit-status" required class="w-full px-3 py-2 border rounded-lg">
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor (N. DOC)</label>
+          <input type="text" id="edit-fornecedor" class="w-full px-3 py-2 border rounded-lg" />
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <i class="fa-solid fa-save mr-2"></i>Salvar
+          </button>
+          <button type="button" id="cancel-edit" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  // Backend - Ajuste conforme seu deploy
+  // Para desenvolvimento local:
+  const API_BASE = 'http://localhost:4000';
+  // Para produção online (descomente e ajuste o link):
+  // const API_BASE = 'https://seu-backend.onrender.com';
+
+  const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+  const DATE_BR = new Intl.DateTimeFormat('pt-BR');
+
+  const MOCK = [
+    { date:'2024-10-01', description:'Retirada mensal - Kellen',   value:-15000, category:'10', status:'pago',    vendor:'Kellen',        type:'despesa' },
+    { date:'2024-10-02', description:'Controltech - Contabilidade',value:-2500,  category:'20', status:'pago',    vendor:'Controltech',   type:'despesa' },
+    { date:'2024-10-03', description:'XP Investimentos - Aplicação',value:50000, category:'3',  status:'pago',    vendor:'XP Investimentos', type:'receita' },
+    { date:'2024-10-05', description:'Juliana MT - Terceirizada',  value:-8500,  category:'13', status:'pendente',vendor:'Juliana MT',    type:'despesa' },
+    { date:'2024-10-07', description:'INSS - Pagamento',           value:-12000, category:'30', status:'pendente',vendor:'INSS',          type:'despesa' },
+    { date:'2024-10-10', description:'Venda - Creative Book',      value:35000,  category:'2',  status:'pago',    vendor:'Creative Book', type:'receita' },
+    { date:'2024-10-12', description:'Energia Elétrica',           value:-800,   category:'20', status:'vencido', vendor:'CESAN',         type:'despesa' },
+    { date:'2024-10-15', description:'Integralização Rose',        value:39600,  category:'2',  status:'pago',    vendor:'Rose',          type:'receita' },
+  ];
+
+  const normalize = (s='') => String(s).normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();
+  const isPositive = v => Number(v||0) > 0;
+
+  function computeTotals(items){
+    const receitas = items.filter(x => isPositive(x.value)).reduce((a,b)=>a + Number(b.value || 0), 0);
+    const despesas = Math.abs(items.filter(x => !isPositive(x.value)).reduce((a,b)=>a + Number(b.value || 0), 0));
+    return { receitas, despesas, saldo: receitas - despesas };
+  }
+
+  function applyFilterPipeline(data, {term='', status='', category=''}){
+    const t = normalize(term);
+    return (data||[]).filter(item => {
+      const matchesTerm = !t || normalize(item.description).includes(t) || normalize(item.vendor).includes(t);
+      const matchesStatus = !status || String(item.status) === String(status);
+      const matchesCategory = !category || String(item.category) === String(category);
+      return matchesTerm && matchesStatus && matchesCategory;
+    });
+  }
+
+  let financialData = []; // Agora vazio, será preenchido pelo backend
+  let filteredData = [];
+  
+  // Função para abrir modal de edição (definida globalmente)
+  function openEditModal(item) {
+    console.log('🔍 Abrindo modal de edição para:', item);
+    const editModal = document.getElementById('edit-modal');
+    if (!editModal) {
+      console.error('Modal edit-modal não encontrado!');
+      alert('Erro: Modal de edição não encontrado. Recarregue a página.');
+      return;
+    }
+    
+    document.getElementById('edit-id').value = item.id || '';
+    document.getElementById('edit-codigo').value = item.codigo || '';
+    document.getElementById('edit-data').value = item.date || '';
+    document.getElementById('edit-descricao').value = item.description || '';
+    document.getElementById('edit-valor').value = item.value || 0;
+    document.getElementById('edit-saldo').value = item.saldo || '';
+    document.getElementById('edit-categoria').value = item.category || '';
+    document.getElementById('edit-status').value = item.status || 'pendente';
+    document.getElementById('edit-fornecedor').value = item.vendor || '';
+    
+    editModal.classList.remove('hidden');
+    console.log('✅ Modal aberto');
+  }
+
+  // Função para buscar transações do backend
+  async function loadTransactions() {
+    try {
+      const res = await fetch(`${API_BASE}/finance/transactions?page=1&limit=5000`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      // Converter formato do backend para o formato esperado pelo frontend
+      financialData = data.items.map(item => ({
+        id: item.id,
+        date: item.data ? new Date(item.data).toISOString().split('T')[0] : null,
+        description: item.descricao || '',
+        value: Number(item.valor) || 0,
+        category: item.centroCusto || '',
+        status: item.status?.toLowerCase() || 'pendente',
+        vendor: item.ndoc || '', // usando ndoc como vendor temporariamente
+        codigo: item.codigo || '',
+        saldo: item.saldo ? Number(item.saldo) : null
+      }));
+
+      // Mantém a ordem original do Excel (não ordena)
+      // A ordem já vem correta do backend
+
+      filteredData = [...financialData];
+      updateAll();
+      
+      // Atualiza cards do dashboard se necessário
+      if (document.getElementById('tab-dashboard') && !document.getElementById('tab-dashboard').classList.contains('hidden')) {
+        updateDashboardCards();
+      }
+    } catch (err) {
+      console.error('[loadTransactions] Erro:', err);
+      financialData = [];
+      filteredData = [];
+      updateAll();
+    }
+  }
+
+  // Função para buscar resumo (totais) do backend
+  async function loadSummary() {
+    try {
+      const res = await fetch(`${API_BASE}/finance/summary`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      document.getElementById('total-receitas').textContent = BRL.format(Number(data.receitas) || 0);
+      document.getElementById('total-despesas').textContent = BRL.format(Number(data.despesas) || 0);
+      document.getElementById('saldo-liquido').textContent = BRL.format(Number(data.saldo) || 0);
+    } catch (err) {
+      console.error('[loadSummary] Erro:', err);
+    }
+  }
+
+  async function syncFromBackend(){
+    const btnSync = document.getElementById('btn-sync');
+    if (!btnSync) {
+      console.error('Botão btn-sync não encontrado!');
+      alert('Erro: Botão de sincronização não encontrado.');
+      return;
+    }
+    
+    const originalText = btnSync.innerHTML;
+    
+    try {
+      console.log('🔄 Iniciando sincronização...');
+      // Desabilita o botão e mostra loading
+      btnSync.disabled = true;
+      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...';
+      
+      console.log(`📡 Chamando: ${API_BASE}/finance/sync`);
+      const res = await fetch(`${API_BASE}/finance/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log(`📥 Resposta recebida: status ${res.status}`);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+      }
+      
+      const data = await res.json();
+      console.log('📊 Dados recebidos:', data);
+      
+      if (data.success) {
+        alert(`✅ Sincronização concluída!\n\n${data.imported} transações importadas.`);
+        // Recarrega os dados
+        await loadTransactions();
+        await loadSummary();
+      } else {
+        alert(`❌ Erro na sincronização:\n\n${data.message || data.error || 'Erro desconhecido'}`);
+      }
+    } catch (err) {
+      console.error('[syncFromBackend] Erro completo:', err);
+      const errorMsg = err.message || 'Erro desconhecido';
+      alert(`❌ Erro ao sincronizar:\n\n${errorMsg}\n\nVerifique:\n1. Se o servidor está rodando na porta 4000\n2. Se o arquivo Excel está no caminho correto\n3. Abra o console (F12) para mais detalhes`);
+    } finally {
+      // Reabilita o botão
+      btnSync.disabled = false;
+      btnSync.innerHTML = originalText;
+    }
+  }
+
+  function renderTable(rows){
+    const tbody = document.getElementById('transactions-table');
+    tbody.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    (rows||[]).forEach((item, idx) => {
+      const tr = document.createElement('tr');
+      tr.className = idx % 2 ? 'bg-gray-50' : 'bg-white';
+
+      const tdDate = document.createElement('td'); tdDate.className='px-6 py-3 text-sm'; tdDate.textContent = (item.date ? DATE_BR.format(new Date(item.date)) : '-');
+      const tdDesc = document.createElement('td'); tdDesc.className='px-6 py-3 text-sm'; tdDesc.textContent = item.description || '-';
+      const tdVal = document.createElement('td'); tdVal.className='px-6 py-3 text-sm text-right font-semibold ' + (isPositive(item.value) ? 'text-green-600' : 'text-red-600'); tdVal.textContent = (isPositive(item.value) ? '+' : '') + BRL.format(Math.abs(Number(item.value||0)));
+      const tdCat = document.createElement('td'); tdCat.className='px-6 py-3 text-sm'; tdCat.textContent = item.category || '-';
+      const tdStatus = document.createElement('td'); tdStatus.className='px-6 py-3 text-sm'; const span=document.createElement('span'); span.className='badge ' + (item.status==='pago'?'badge-pago': item.status==='pendente'?'badge-pendente':'badge-vencido'); span.textContent = String(item.status||'').charAt(0).toUpperCase() + String(item.status||'').slice(1); span.setAttribute('aria-label','Status '+(item.status||'')); tdStatus.appendChild(span);
+      const tdVend = document.createElement('td'); tdVend.className='px-6 py-3 text-sm'; tdVend.textContent = item.vendor || '-';
+      const tdSaldo = document.createElement('td'); tdSaldo.className='px-6 py-3 text-sm text-right font-medium text-blue-600'; tdSaldo.textContent = (item.saldo !== null && item.saldo !== undefined) ? BRL.format(Number(item.saldo)) : '-';
+
+      const tdActions = document.createElement('td'); tdActions.className='px-6 py-3 text-sm';
+      const btnEdit = document.createElement('button'); 
+      btnEdit.className='text-blue-600 mr-3 hover:text-blue-800 cursor-pointer'; 
+      btnEdit.setAttribute('aria-label','Editar'); 
+      btnEdit.innerHTML = '<i class="fa-solid fa-pen"></i>'; 
+      btnEdit.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('🖊️ Botão editar clicado para item:', item);
+        if (typeof openEditModal === 'function') {
+          openEditModal(item);
+        } else {
+          console.error('❌ Função openEditModal não encontrada!');
+          alert('Erro: Função de edição não disponível. Recarregue a página.');
+        }
+      });
+      const btnDel = document.createElement('button'); 
+      btnDel.className='text-red-600 hover:text-red-800 cursor-pointer'; 
+      btnDel.setAttribute('aria-label','Excluir'); 
+      btnDel.innerHTML = '<i class="fa-solid fa-trash"></i>'; 
+      btnDel.addEventListener('click', async () => {
+        if (!confirm('Excluir esta transação? Esta ação não pode ser desfeita.')) {
+          return;
+        }
+        
+        try {
+          console.log(`🗑️ Excluindo transação:`, item);
+          console.log(`🗑️ ID: ${item.id}, Código: "${item.codigo}"`);
+          
+          // Prioriza usar o ID se disponível (mais confiável)
+          let url;
+          if (item.id) {
+            url = `${API_BASE}/finance/id/${item.id}`;
+            console.log(`🗑️ Usando ID para exclusão: ${item.id}`);
+          } else if (item.codigo) {
+            url = `${API_BASE}/finance/${encodeURIComponent(item.codigo)}`;
+            console.log(`🗑️ Usando código para exclusão: "${item.codigo}"`);
+          } else {
+            throw new Error('Transação não possui ID nem código válido');
+          }
+          
+          console.log(`🗑️ URL de exclusão: ${url}`);
+          
+          const res = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const data = await res.json();
+          console.log('📥 Resposta do servidor:', data);
+          
+          if (!res.ok) {
+            throw new Error(data.message || data.error || `HTTP ${res.status}`);
+          }
+          
+          if (data.success === false) {
+            throw new Error(data.message || 'Erro ao excluir transação');
+          }
+          
+          console.log('✅ Transação excluída com sucesso');
+          
+          // Recarrega os dados do backend para garantir sincronização
+          await loadTransactions();
+          await loadSummary();
+          
+          alert('✅ Transação excluída com sucesso!');
+        } catch (err) {
+          console.error('[Excluir] Erro completo:', err);
+          alert(`❌ Erro ao excluir transação:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
+        }
+      });
+      tdActions.append(btnEdit, btnDel);
+
+      tr.append(tdDate, tdDesc, tdVal, tdCat, tdStatus, tdVend, tdSaldo, tdActions);
+      frag.appendChild(tr);
+    });
+    tbody.appendChild(frag);
+  }
+
+  function updateTotals(rows){
+    const { receitas, despesas, saldo } = computeTotals(rows);
+    document.getElementById('total-receitas').textContent = BRL.format(receitas);
+    document.getElementById('total-despesas').textContent = BRL.format(despesas);
+    document.getElementById('saldo-liquido').textContent = BRL.format(saldo);
+  }
+
+  function updateAll(){
+    renderTable(filteredData);
+    updateTotals(filteredData);
+    // Atualiza cards do dashboard se estiver na aba dashboard
+    if (document.getElementById('tab-dashboard') && !document.getElementById('tab-dashboard').classList.contains('hidden')) {
+      updateDashboardCards();
+    }
+  }
+
+  function applyFilters(){
+    const term = document.getElementById('search-input').value || '';
+    const status = document.getElementById('status-filter').value || '';
+    const category = document.getElementById('category-filter').value || '';
+    filteredData = applyFilterPipeline(financialData, { term, status, category });
+    updateAll();
+  }
+
+  let chartsLoaded = false;
+  function loadCharts(){
+    if(chartsLoaded) return; chartsLoaded = true;
+    const vencidas = financialData.filter(x => x.status==='vencido').length;
+    const pendentes = financialData.filter(x => x.status==='pendente').length;
+    const pagosHoje = financialData.filter(x => x.status==='pago').length;
+    document.getElementById('kpi-urgente').textContent = vencidas;
+    document.getElementById('kpi-vencer').textContent = pendentes;
+    document.getElementById('kpi-pagos-hoje').textContent = pagosHoje;
+    
+    // Atualiza cards informativos
+    updateDashboardCards();
+
+    const catAgg = {};
+    financialData.forEach(x => { const k = x.category || '—'; catAgg[k] = (catAgg[k]||0) + Math.abs(Number(x.value)||0); });
+    const catLabels = Object.keys(catAgg);
+    const catValues = Object.values(catAgg);
+
+    new Chart(document.getElementById('categoryChart'), { type:'doughnut', data:{ labels: catLabels, datasets:[{ data: catValues }] }, options:{ responsive:true, maintainAspectRatio:false } });
+
+    new Chart(document.getElementById('cashFlowChart'), { type:'bar', data:{ labels:['Jan','Fev','Mar','Abr','Mai','Jun'], datasets:[{label:'Receitas', data:[150000,165000,142000,180000,195000,210000], backgroundColor:'#10B981'},{label:'Despesas', data:[120000,135000,128000,145000,155000,160000], backgroundColor:'#EF4444'}] }, options:{ responsive:true, maintainAspectRatio:false } });
+
+    new Chart(document.getElementById('evolutionChart'), { type:'line', data:{ labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'], datasets:[{ label:'Saldo Acumulado', data:[30000,60000,74000,109000,149000,199000,235000,270000,298000,330000], fill:true }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    
+    // Atualiza cards informativos após carregar gráficos
+    updateDashboardCards();
+  }
+  
+  // Função para atualizar os cards informativos do dashboard
+  function updateDashboardCards() {
+    // Total a Pagar: soma de todas as transações pendentes com valor negativo
+    const totalAPagar = financialData
+      .filter(x => x.status === 'pendente' && Number(x.value) < 0)
+      .reduce((sum, x) => sum + Math.abs(Number(x.value) || 0), 0);
+    
+    // Total a Receber: soma de todas as transações pendentes com valor positivo
+    const totalAReceber = financialData
+      .filter(x => x.status === 'pendente' && Number(x.value) > 0)
+      .reduce((sum, x) => sum + Math.abs(Number(x.value) || 0), 0);
+    
+    // Em Caixa: último saldo acumulado (saldo da última transação)
+    let emCaixa = 0;
+    if (financialData.length > 0) {
+      // Ordena por data para pegar o saldo mais recente
+      const sortedByDate = [...financialData].sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA; // Mais recente primeiro
+      });
+      
+      // Pega o saldo da transação mais recente que tem saldo
+      const lastWithSaldo = sortedByDate.find(x => x.saldo !== null && x.saldo !== undefined);
+      if (lastWithSaldo) {
+        emCaixa = Number(lastWithSaldo.saldo) || 0;
+      } else {
+        // Se não tem saldo, calcula o saldo acumulado
+        emCaixa = financialData.reduce((sum, x) => sum + Number(x.value || 0), 0);
+      }
+    }
+    
+    // Projeção: Em Caixa + Total a Receber - Total a Pagar
+    const projecao = emCaixa + totalAReceber - totalAPagar;
+    
+    // Atualiza os elementos
+    const totalAPagarEl = document.getElementById('total-a-pagar');
+    const totalAReceberEl = document.getElementById('total-a-receber');
+    const emCaixaEl = document.getElementById('em-caixa');
+    const projecaoEl = document.getElementById('projecao');
+    
+    if (totalAPagarEl) totalAPagarEl.textContent = BRL.format(totalAPagar);
+    if (totalAReceberEl) totalAReceberEl.textContent = BRL.format(totalAReceber);
+    if (emCaixaEl) emCaixaEl.textContent = BRL.format(emCaixa);
+    if (projecaoEl) projecaoEl.textContent = BRL.format(projecao);
+  }
+
+
+  function switchTab(name){
+    document.querySelectorAll('.tab-panel').forEach(s=>s.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('tab-active'));
+    const sec = document.getElementById('tab-'+name);
+    if(sec) sec.classList.remove('hidden');
+    const btn = document.querySelector('.tab-btn[data-tab="'+name+'"]');
+    if(btn) btn.classList.add('tab-active');
+    if(name==='dashboard') loadCharts();
+  }
+
+  function appendAssistant(who, text){
+    const box = document.getElementById('assistant-messages');
+    const el = document.createElement('div');
+    el.style.maxWidth = '80%';
+    
+    if(who === 'user'){
+      el.className = 'ml-auto text-white px-4 py-3 rounded-lg';
+      el.style.background = 'linear-gradient(90deg,#6366F1,#8B5CF6)';
+    } else {
+      el.className = 'mr-auto bg-white px-4 py-3 rounded-lg shadow-sm';
+      // Adiciona ícone do robô na mensagem do assistente
+      const icon = document.createElement('i');
+      icon.className = 'fa-solid fa-robot text-indigo-600 mr-2';
+      el.appendChild(icon);
+    }
+    
+    const textNode = document.createTextNode(text);
+    el.appendChild(textNode);
+    
+    // Adiciona timestamp
+    const time = document.createElement('div');
+    time.className = 'text-xs text-gray-400 mt-1';
+    time.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    el.appendChild(time);
+    
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', ()=> switchTab(btn.dataset.tab)));
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('category-filter').addEventListener('change', applyFilters);
+    document.getElementById('btn-clear').addEventListener('click', () => { document.getElementById('search-input').value=''; document.getElementById('status-filter').value=''; document.getElementById('category-filter').value=''; filteredData = [...financialData]; updateAll(); });
+    document.getElementById('btn-sync').addEventListener('click', syncFromBackend);
+
+    const aiInput = document.getElementById('assistant-input');
+    const aiSend = document.getElementById('assistant-send');
+    aiSend.addEventListener('click', async () => {
+      const text = (aiInput.value||'').trim(); if(!text) return;
+      appendAssistant('user', text); aiInput.value = '';
+
+      // Usa o backend local ao invés do n8n
+      const url = `${API_BASE}/assistant/chat`;
+      const payload = { message: text };
+
+      console.log('[Assistente] Enviando para:', url);
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const reply = data.reply || data.message || 'Sem resposta do assistente.';
+        appendAssistant('bot', reply);
+        
+        // Se a resposta indica que uma ação foi executada, recarrega os dados
+        const replyLower = reply.toLowerCase();
+        if (replyLower.includes('adicionada') || replyLower.includes('marcada') || replyLower.includes('criada') || replyLower.includes('atualizada')) {
+          console.log('🔄 Ação executada, recarregando dados...');
+          // Aguarda um pouco para garantir que o banco foi atualizado
+          setTimeout(async () => {
+            await loadTransactions();
+            await loadSummary();
+            // Se estiver na aba de controle, atualiza a visualização
+            if (!document.getElementById('tab-controle').classList.contains('hidden')) {
+              updateAll();
+            }
+          }, 500);
+        }
+      } catch (err) {
+        console.error('[Assistente] Erro:', err);
+        appendAssistant('bot', 'Erro ao conectar com o assistente. Verifique se o backend está rodando.');
+      }
+    });
+    aiInput.addEventListener('keydown', (e)=> { if(e.key==='Enter') aiSend.click(); });
+    
+    // Botões de ação rápida
+    const quickAddExpense = document.getElementById('quick-add-expense');
+    const quickMarkPaid = document.getElementById('quick-mark-paid');
+    const quickDelete = document.getElementById('quick-delete');
+    const quickReminder = document.getElementById('quick-reminder');
+    
+    quickDelete.addEventListener('click', () => {
+      const descricao = prompt('Digite a descrição da transação que deseja excluir:');
+      if (!descricao || descricao.trim() === '') return;
+      
+      if (!confirm(`⚠️ ATENÇÃO: Você está prestes a excluir permanentemente a transação "${descricao}".\n\nEsta ação não pode ser desfeita!\n\nDeseja continuar?`)) {
+        return;
+      }
+      
+      const mensagem = `excluir transação ${descricao}`;
+      aiInput.value = mensagem;
+      aiSend.click();
+    });
+    quickAddExpense.addEventListener('click', () => {
+      const descricao = prompt('Digite a descrição da despesa:');
+      if (!descricao) return;
+      
+      const valor = prompt('Digite o valor (ex: 1500):');
+      if (!valor) return;
+      
+      const categoria = prompt('Digite a categoria (ex: Salários, Aluguel):') || 'Outros';
+      
+      const mensagem = `adicionar despesa ${descricao}: ${valor} reais, categoria: ${categoria}`;
+      aiInput.value = mensagem;
+      aiSend.click();
+    });
+    
+    quickMarkPaid.addEventListener('click', () => {
+      const descricao = prompt('Digite a descrição da transação a marcar como paga:');
+      if (!descricao) return;
+      
+      const mensagem = `marcar ${descricao} como pago`;
+      aiInput.value = mensagem;
+      aiSend.click();
+    });
+    
+    quickReminder.addEventListener('click', () => {
+      const titulo = prompt('Digite o título do lembrete:');
+      if (!titulo) return;
+      
+      const descricao = prompt('Digite a descrição do lembrete:') || '';
+      const data = prompt('Digite a data (formato: YYYY-MM-DD ou deixe em branco para hoje):') || new Date().toISOString().split('T')[0];
+      
+      const mensagem = `criar lembrete: ${titulo}, descrição: ${descricao}, data: ${data}`;
+      aiInput.value = mensagem;
+      aiSend.click();
+    });
+
+    // Carregar dados do backend ao iniciar
+    loadTransactions();
+    loadSummary();
+    
+    // ===== FUNÇÕES DE LEMBRETES =====
+    async function loadReminderConfig() {
+      try {
+        const res = await fetch(`${API_BASE}/reminders/config`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const config = await res.json();
+        
+        document.getElementById('config-telefone').value = config.telefoneDestino || '';
+        document.getElementById('config-email').value = config.emailDestino || '';
+        document.getElementById('config-dias').value = Array.isArray(config.diasAntesVencimento) 
+          ? config.diasAntesVencimento.join(',') 
+          : config.diasAntesVencimento || '2,0';
+        document.getElementById('config-horario').value = config.horarioLigacao || '09:00';
+        document.getElementById('config-ativo').checked = config.ativo !== false;
+        document.getElementById('config-enviar-email').checked = config.enviarEmail !== false;
+        document.getElementById('config-fazer-ligacao').checked = config.fazerLigacao !== false;
+      } catch (err) {
+        console.error('[Lembretes] Erro ao carregar configurações:', err);
+      }
+    }
+    
+    async function saveReminderConfig() {
+      try {
+        const diasArray = document.getElementById('config-dias').value
+          .split(',')
+          .map(d => parseInt(d.trim(), 10))
+          .filter(d => !isNaN(d));
+        
+        const config = {
+          telefoneDestino: document.getElementById('config-telefone').value.trim(),
+          emailDestino: document.getElementById('config-email').value.trim(),
+          diasAntesVencimento: diasArray.length > 0 ? diasArray : [2, 0],
+          horarioLigacao: document.getElementById('config-horario').value,
+          ativo: document.getElementById('config-ativo').checked,
+          enviarEmail: document.getElementById('config-enviar-email').checked,
+          fazerLigacao: document.getElementById('config-fazer-ligacao').checked,
+        };
+        
+        const res = await fetch(`${API_BASE}/reminders/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
+        });
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        alert('✅ Configurações salvas com sucesso!');
+        await loadUpcomingTransactions();
+      } catch (err) {
+        console.error('[Lembretes] Erro ao salvar configurações:', err);
+        alert(`❌ Erro ao salvar configurações: ${err.message}`);
+      }
+    }
+    
+    async function loadUpcomingTransactions() {
+      try {
+        const res = await fetch(`${API_BASE}/reminders/upcoming?dias=2,1,0`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const transactions = await res.json();
+        
+        const container = document.getElementById('upcoming-transactions');
+        
+        if (transactions.length === 0) {
+          container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhuma transação próxima do vencimento.</p>';
+          return;
+        }
+        
+        container.innerHTML = transactions.map(item => {
+          const t = item.transaction;
+          const dias = item.diasRestantes;
+          const valor = Math.abs(Number(t.valor)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          const data = new Date(t.data).toLocaleDateString('pt-BR');
+          
+          let badgeClass = 'bg-yellow-100 text-yellow-800';
+          let badgeText = `${dias} dias`;
+          if (dias === 0) {
+            badgeClass = 'bg-red-100 text-red-800';
+            badgeText = 'VENCE HOJE!';
+          } else if (dias === 1) {
+            badgeClass = 'bg-orange-100 text-orange-800';
+            badgeText = 'Vence amanhã';
+          }
+          
+          return `
+            <div class="border rounded-lg p-4 ${dias === 0 ? 'border-red-300 bg-red-50' : dias === 1 ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">${t.descricao}</h3>
+                  <p class="text-sm text-gray-600 mt-1">
+                    <span class="font-medium">Valor:</span> ${valor} | 
+                    <span class="font-medium">Vencimento:</span> ${data}
+                  </p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-sm font-medium ${badgeClass}">${badgeText}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('[Lembretes] Erro ao carregar transações:', err);
+        document.getElementById('upcoming-transactions').innerHTML = 
+          `<p class="text-red-500 text-center py-4">Erro ao carregar transações: ${err.message}</p>`;
+      }
+    }
+    
+    async function loadReminderLogs() {
+      try {
+        const res = await fetch(`${API_BASE}/reminders/logs?limit=20`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const logs = await res.json();
+        
+        const container = document.getElementById('reminder-logs');
+        
+        if (logs.length === 0) {
+          container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum lembrete enviado ainda.</p>';
+          return;
+        }
+        
+        container.innerHTML = logs.map(log => {
+          const data = new Date(log.createdAt).toLocaleString('pt-BR');
+          const statusClass = log.status === 'SUCCESS' ? 'text-green-600' : 'text-red-600';
+          const statusIcon = log.status === 'SUCCESS' ? '✓' : '✗';
+          const tipoIcon = log.tipo === 'EMAIL' ? '📧' : '📞';
+          
+          return `
+            <div class="border rounded-lg p-3 text-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="mr-2">${tipoIcon}</span>
+                  <span class="font-medium">${log.tipo}</span>
+                  ${log.mensagem ? `<span class="text-gray-600 ml-2">${log.mensagem}</span>` : ''}
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="${statusClass} font-medium">${statusIcon} ${log.status}</span>
+                  <span class="text-gray-500 text-xs">${data}</span>
+                </div>
+              </div>
+              ${log.erro ? `<p class="text-red-600 text-xs mt-1">Erro: ${log.erro}</p>` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('[Lembretes] Erro ao carregar logs:', err);
+        document.getElementById('reminder-logs').innerHTML = 
+          `<p class="text-red-500 text-center py-4">Erro ao carregar logs: ${err.message}</p>`;
+      }
+    }
+    
+    async function processReminders() {
+      const btn = document.getElementById('btn-process-reminders');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Processando...';
+      
+      try {
+        const res = await fetch(`${API_BASE}/reminders/process`, {
+          method: 'POST',
+        });
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        
+        alert(`✅ Lembretes processados!\n\nTransações: ${result.processed}\nE-mails: ${result.emailsSent}\nLigações: ${result.callsMade}`);
+        
+        await loadUpcomingTransactions();
+        await loadReminderLogs();
+      } catch (err) {
+        console.error('[Lembretes] Erro ao processar:', err);
+        alert(`❌ Erro ao processar lembretes: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+    
+    // Event listeners para aba de lembretes
+    document.getElementById('reminder-config-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await saveReminderConfig();
+    });
+    
+    document.getElementById('btn-process-reminders').addEventListener('click', processReminders);
+    
+    // Carregar dados quando a aba for aberta
+    const tabLembretes = document.getElementById('tab-lembretes');
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          if (!tabLembretes.classList.contains('hidden')) {
+            loadReminderConfig();
+            loadUpcomingTransactions();
+            loadReminderLogs();
+          }
+        }
+      });
+    });
+    observer.observe(tabLembretes, { attributes: true });
+    
+    // Configurar modal de edição
+    const editModal = document.getElementById('edit-modal');
+    const editForm = document.getElementById('edit-form');
+    const closeEditModal = document.getElementById('close-edit-modal');
+    const cancelEdit = document.getElementById('cancel-edit');
+    
+    if (!editModal || !editForm || !closeEditModal || !cancelEdit) {
+      console.error('⚠️ Elementos do modal não encontrados! Verifique se o HTML está correto.');
+    } else {
+      function closeEditModalFunc() {
+        editModal.classList.add('hidden');
+        editForm.reset();
+      }
+      
+      closeEditModal.addEventListener('click', closeEditModalFunc);
+      cancelEdit.addEventListener('click', closeEditModalFunc);
+      
+      // Fechar modal ao clicar fora
+      editModal.addEventListener('click', (e) => {
+        if (e.target === editModal) {
+          closeEditModalFunc();
+        }
+      });
+      
+      // Salvar edição
+      editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const codigo = document.getElementById('edit-codigo').value;
+        if (!codigo) {
+          alert('❌ Erro: Código da transação não encontrado.');
+          return;
+        }
+        
+        const data = {
+          descricao: document.getElementById('edit-descricao').value,
+          valor: parseFloat(document.getElementById('edit-valor').value),
+          centroCusto: document.getElementById('edit-categoria').value,
+          status: document.getElementById('edit-status').value.toLowerCase(),
+          data: document.getElementById('edit-data').value,
+          ndoc: document.getElementById('edit-fornecedor').value || undefined,
+          saldo: document.getElementById('edit-saldo').value ? parseFloat(document.getElementById('edit-saldo').value) : undefined,
+        };
+        
+        try {
+          console.log('💾 Salvando edição:', data);
+          const res = await fetch(`${API_BASE}/finance/${codigo}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          });
+          
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+            throw new Error(errorData.message || `HTTP ${res.status}`);
+          }
+          
+          const updated = await res.json();
+          console.log('✅ Transação atualizada:', updated);
+          alert('✅ Transação atualizada com sucesso!');
+          closeEditModalFunc();
+          
+          // Recarrega os dados
+          await loadTransactions();
+          await loadSummary();
+        } catch (err) {
+          console.error('[Editar] Erro:', err);
+          alert(`❌ Erro ao atualizar transação:\n\n${err.message}`);
+        }
+      });
+      
+      console.log('✅ Modal de edição configurado com sucesso');
+    }
+
+    // Adiciona mensagem de boas-vindas ao abrir a aba do assistente
+    document.querySelector('.tab-btn[data-tab="assistente"]').addEventListener('click', () => {
+      // Verifica se já existe uma mensagem de boas-vindas para evitar duplicar
+      const messagesBox = document.getElementById('assistant-messages');
+      if (messagesBox.children.length === 0) {
+        appendAssistant('bot', 'Olá! Sou seu assistente financeiro. Como posso ajudar você hoje?');
+      }
+    });
+  });
+
+  // micro-tests
+  (function(){
+    const arr = [{description:'ABC', vendor:'x', value:10, status:'pago', category:'10'},{description:'DEF', vendor:'y', value:-5, status:'pendente', category:'20'},{description:'ghi', vendor:'z', value:-20, status:'vencido', category:'20'}];
+    console.log(computeTotals(arr));
+    console.log(applyFilterPipeline(arr,{term:'ab',status:'',category:''}));
+  })();
+  </script>
+</body>
+</html>
