@@ -16,6 +16,7 @@ async function run() {
   process.exit(0);
 }
 
+
 run().catch((err) => {
   console.error('Erro ao importar Excel:', err);
   process.exit(1);
