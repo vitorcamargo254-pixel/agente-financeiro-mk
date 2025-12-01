@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node dist/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start:prod": "node dist/main.js",
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",

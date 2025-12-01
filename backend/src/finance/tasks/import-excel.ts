@@ -3,15 +3,17 @@ import { PrismaClient } from '@prisma/client';
 import { FinanceSyncService } from '../finance-sync.service';
 import { ExcelService } from '../excel/excel.service';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../common/prisma.service';
 
 async function run() {
-  const prisma = new PrismaClient();
+  const prismaClient = new PrismaClient();
+  const prismaService = new PrismaService();
   const config = { get: (key: string) => process.env[key] } as ConfigService;
   const excel = new ExcelService(config);
-  const financeSync = new FinanceSyncService(config, prisma);
+  const financeSync = new FinanceSyncService(config, prismaService);
   const result = await financeSync.syncFromExcel();
   console.log(`✅ Importação concluída: ${result.imported} linhas sincronizadas.`);
-  await prisma.$disconnect();
+  await prismaClient.$disconnect();
   process.exit(0);
 }
 
