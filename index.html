@@ -385,9 +385,13 @@
   <script>
   // Backend - Detectar ambiente automaticamente
   // Para desenvolvimento local ou produção online:
+  // IMPORTANTE: Se o backend estiver em uma URL diferente, altere abaixo:
+  const BACKEND_URL = 'https://agente-financeiro-mk-backend.onrender.com'; // ⚠️ ALTERE AQUI SE NECESSÁRIO
   const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:4000'
-    : 'https://agente-financeiro-mk.onrender.com';
+    : BACKEND_URL;
+  
+  console.log('🔗 API_BASE configurado para:', API_BASE);
 
   const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   const DATE_BR = new Intl.DateTimeFormat('pt-BR');
