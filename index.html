@@ -387,13 +387,6 @@
   // Para desenvolvimento local ou produção online:
   // IMPORTANTE: Se o backend estiver em uma URL diferente, altere abaixo:
   
-  // Lista de URLs possíveis do backend (tente na ordem)
-  const POSSIBLE_BACKEND_URLS = [
-    'https://agente-financeiro-mk.onrender.com',           // URL padrão mais comum
-    'https://agente-financeiro-mk-backend.onrender.com',  // URL alternativa
-    'https://microkids-backend.onrender.com',              // Outra possibilidade
-  ];
-  
   // Detectar ambiente
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   
@@ -402,11 +395,8 @@
   if (isLocal) {
     API_BASE = 'http://localhost:4000';
   } else {
-    // Tentar usar a primeira URL da lista (você pode alterar a ordem se necessário)
-    API_BASE = POSSIBLE_BACKEND_URLS[0];
-    
-    // Se você souber a URL exata do seu backend, descomente e use:
-    // API_BASE = 'https://SUA-URL-DO-BACKEND.onrender.com';
+    // URL do backend no Render (ATUALIZADA!)
+    API_BASE = 'https://agente-financeiro-mk-backend.onrender.com';
   }
   
   console.log('🔗 API_BASE configurado para:', API_BASE);

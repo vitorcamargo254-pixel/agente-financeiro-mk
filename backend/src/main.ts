@@ -36,7 +36,8 @@ async function bootstrap() {
     console.log('✅ Pipes configurados');
 
     const port = process.env.PORT || 4000;
-    await app.listen(port);
+    // Render precisa que escutemos em 0.0.0.0, não apenas localhost
+    await app.listen(port, '0.0.0.0');
     console.log(`🚀 Microkids backend rodando na porta ${port}`);
   } catch (error) {
     console.error('❌ Erro ao iniciar aplicação:', error);
