@@ -386,12 +386,50 @@
   // Backend - Detectar ambiente automaticamente
   // Para desenvolvimento local ou produção online:
   // IMPORTANTE: Se o backend estiver em uma URL diferente, altere abaixo:
-  const BACKEND_URL = 'https://agente-financeiro-mk-backend.onrender.com'; // ⚠️ ALTERE AQUI SE NECESSÁRIO
-  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:4000'
-    : BACKEND_URL;
+  
+  // Lista de URLs possíveis do backend (tente na ordem)
+  const POSSIBLE_BACKEND_URLS = [
+    'https://agente-financeiro-mk.onrender.com',           // URL padrão mais comum
+    'https://agente-financeiro-mk-backend.onrender.com',  // URL alternativa
+    'https://microkids-backend.onrender.com',              // Outra possibilidade
+  ];
+  
+  // Detectar ambiente
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // Configurar API_BASE
+  let API_BASE;
+  if (isLocal) {
+    API_BASE = 'http://localhost:4000';
+  } else {
+    // Tentar usar a primeira URL da lista (você pode alterar a ordem se necessário)
+    API_BASE = POSSIBLE_BACKEND_URLS[0];
+    
+    // Se você souber a URL exata do seu backend, descomente e use:
+    // API_BASE = 'https://SUA-URL-DO-BACKEND.onrender.com';
+  }
   
   console.log('🔗 API_BASE configurado para:', API_BASE);
+  console.log('🌐 Hostname atual:', window.location.hostname);
+  
+  // Função para testar conexão com o backend
+  async function testBackendConnection() {
+    try {
+      const response = await fetch(`${API_BASE}/health`, { 
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+      if (response.ok) {
+        console.log('✅ Backend conectado com sucesso!');
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao conectar com backend:', error);
+      console.error('⚠️ Verifique se a URL do backend está correta:', API_BASE);
+      return false;
+    }
+  }
 
   const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   const DATE_BR = new Intl.DateTimeFormat('pt-BR');
@@ -551,7 +589,18 @@
     } catch (err) {
       console.error('[syncFromBackend] Erro completo:', err);
       const errorMsg = err.message || 'Erro desconhecido';
-      alert(`❌ Erro ao sincronizar:\n\n${errorMsg}\n\nVerifique:\n1. Se o servidor está rodando na porta 4000\n2. Se o arquivo Excel está no caminho correto\n3. Abra o console (F12) para mais detalhes`);
+      
+      // Mensagem de erro melhorada
+      let detailedError = `❌ Erro ao sincronizar:\n\n${errorMsg}\n\n`;
+      detailedError += `🔗 URL do Backend tentada: ${API_BASE}\n\n`;
+      detailedError += `📋 Verifique:\n`;
+      detailedError += `1. Se a URL do backend está correta (veja no console F12)\n`;
+      detailedError += `2. Se o backend está online no Render.com\n`;
+      detailedError += `3. Se o arquivo Excel está na pasta backend/\n`;
+      detailedError += `4. Abra o console (F12) para mais detalhes\n\n`;
+      detailedError += `💡 Dica: Vá em render.com → Seu Backend → Copie a URL e me envie!`;
+      
+      alert(detailedError);
     } finally {
       // Reabilita o botão
       btnSync.disabled = false;
