@@ -10,7 +10,6 @@
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "bash scripts/init-db.sh && node dist/main.js",
     "init-db": "bash scripts/init-db.sh",
-    "build": "tsc -p tsconfig.build.json"
     "build": "tsc -p tsconfig.build.json",
     "build:deploy": "npm run prisma:generate && npm run build && npm run prisma:migrate:deploy",
     "lint": "eslint \"src/**/*.ts\"",
