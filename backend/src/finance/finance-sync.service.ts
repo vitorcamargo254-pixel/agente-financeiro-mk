@@ -14,9 +14,18 @@ export class FinanceSyncService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.excelPath =
-      this.config.get<string>('PATH_EXCEL') ||
-      path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
+    // Tenta múltiplos caminhos possíveis
+    const possiblePaths = [
+      this.config.get<string>('PATH_EXCEL'), // Caminho do .env
+      path.join(process.cwd(), 'Financeiro_ETC-.xlsm'), // Pasta raiz do backend
+      path.join(process.cwd(), 'backend', 'Financeiro_ETC-.xlsm'), // Se estiver na raiz do projeto
+    ].filter(Boolean) as string[];
+
+    // Encontra o primeiro arquivo que existe
+    this.excelPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0] || path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
+    
+    this.logger.log(`📁 Caminhos testados: ${possiblePaths.join(', ')}`);
+    this.logger.log(`✅ Usando caminho: ${this.excelPath}`);
   }
 
   async syncFromExcel(): Promise<{ imported: number }> {
