@@ -22,9 +22,10 @@ export class ExcelService {
   private readonly excelPath: string;
 
   constructor(private readonly config: ConfigService) {
+    // Tenta usar PATH_EXCEL do .env, senão usa arquivo na pasta backend/
     this.excelPath =
       this.config.get<string>('PATH_EXCEL') ||
-      path.join(process.cwd(), 'financeiro.xlsx');
+      path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
   }
 
   async loadWorkbook(): Promise<ExcelJS.Workbook> {

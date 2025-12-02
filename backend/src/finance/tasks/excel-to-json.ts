@@ -3,7 +3,8 @@ import * as path from 'node:path';
 import * as fs from 'fs';
 import * as ExcelJS from 'exceljs';
 
-const excelPath = process.env.PATH_EXCEL || 'C:/Users/rose-/OneDrive/Nova Pasta/Financeiro_ETC-.xlsm';
+// Usa PATH_EXCEL do .env ou arquivo na pasta backend/
+const excelPath = process.env.PATH_EXCEL || path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
 const outputPath = path.join(process.cwd(), 'transactions.json');
 
 interface Transaction {

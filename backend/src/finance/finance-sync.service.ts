@@ -16,7 +16,7 @@ export class FinanceSyncService {
   ) {
     this.excelPath =
       this.config.get<string>('PATH_EXCEL') ||
-      path.join(process.cwd(), 'financeiro.xlsx');
+      path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
   }
 
   async syncFromExcel(): Promise<{ imported: number }> {
