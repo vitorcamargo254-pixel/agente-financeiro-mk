@@ -603,8 +603,33 @@ export class FinanceSyncService {
     this.logger.log('📥 Importando para banco de dados...');
 
     // Limpa o banco
-    const deleted = await this.prisma.transaction.deleteMany({});
-    this.logger.log(`Removidas ${deleted.count} transações antigas`);
+    // Verificar se a tabela existe antes de tentar deletar
+    try {
+      // Tenta executar migrations se necessário
+      const { execSync } = require('child_process');
+      try {
+        execSync('npx prisma migrate deploy', { stdio: 'pipe' });
+        this.logger.log('✅ Migrations verificadas');
+      } catch (migrationError) {
+        this.logger.warn('⚠️ Aviso ao executar migrations:', migrationError);
+      }
+      
+      // Verifica se consegue acessar a tabela
+      await this.prisma.$queryRaw`SELECT 1 FROM Transaction LIMIT 1`;
+      const deleted = await this.prisma.transaction.deleteMany({});
+      this.logger.log(`🗑️ ${deleted.count} transações antigas removidas`);
+    } catch (error: any) {
+      // Se a tabela não existe, cria ela primeiro
+      if (error.message?.includes('does not exist') || error.code === 'P2021') {
+        this.logger.warn('⚠️ Tabela não existe, tentando criar...');
+        const { execSync } = require('child_process');
+        execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+        this.logger.log('✅ Tabela criada, continuando...');
+      } else {
+        // Se for outro erro, apenas loga e continua
+        this.logger.warn('⚠️ Erro ao limpar transações antigas:', error.message);
+      }
+    }
 
     let imported = 0;
     const batchSize = 100;
