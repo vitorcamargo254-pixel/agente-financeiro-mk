@@ -62,41 +62,81 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.$connect();
       this.logger.log('✅ Conectado ao banco de dados');
       
-      // SOLUÇÃO DEFINITIVA: Cria tabela via SQL direto se não existir
+      // SOLUÇÃO DEFINITIVA: Cria todas as tabelas via SQL direto se não existirem
       try {
-        // Verifica se tabela existe
-        const tables = await this.$queryRaw<Array<{ name: string }>>`
-          SELECT name FROM sqlite_master WHERE type='table' AND name='Transaction'
-        `;
-        
-        if (tables.length === 0) {
-          this.logger.log('🔄 Criando tabela Transaction via SQL direto...');
-          // Cria tabela diretamente via SQL
-          await this.$executeRawUnsafe(`
-            CREATE TABLE IF NOT EXISTS "Transaction" (
-              "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-              "descricao" TEXT NOT NULL,
-              "codigo" TEXT NOT NULL UNIQUE,
-              "centroCusto" TEXT NOT NULL,
-              "ndoc" TEXT,
-              "valor" DECIMAL NOT NULL,
-              "status" TEXT NOT NULL DEFAULT 'PENDENTE',
-              "data" DATETIME NOT NULL,
-              "saldo" DECIMAL,
-              "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-          `);
-          this.logger.log('✅ Tabela Transaction criada com sucesso!');
-        } else {
-          this.logger.log('✅ Tabela Transaction já existe');
+        // Lista de tabelas necessárias
+        const tablesToCreate = [
+          {
+            name: 'Transaction',
+            sql: `
+              CREATE TABLE IF NOT EXISTS "Transaction" (
+                "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                "descricao" TEXT NOT NULL,
+                "codigo" TEXT NOT NULL UNIQUE,
+                "centroCusto" TEXT NOT NULL,
+                "ndoc" TEXT,
+                "valor" DECIMAL NOT NULL,
+                "status" TEXT NOT NULL DEFAULT 'PENDENTE',
+                "data" DATETIME NOT NULL,
+                "saldo" DECIMAL,
+                "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+              )
+            `
+          },
+          {
+            name: 'ReminderConfig',
+            sql: `
+              CREATE TABLE IF NOT EXISTS "ReminderConfig" (
+                "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                "diasAntesVencimento" TEXT NOT NULL,
+                "telefoneDestino" TEXT NOT NULL,
+                "emailDestino" TEXT NOT NULL,
+                "ativo" INTEGER NOT NULL DEFAULT 1,
+                "enviarEmail" INTEGER NOT NULL DEFAULT 1,
+                "fazerLigacao" INTEGER NOT NULL DEFAULT 1,
+                "horarioLigacao" TEXT NOT NULL DEFAULT '09:00',
+                "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+              )
+            `
+          },
+          {
+            name: 'ReminderLog',
+            sql: `
+              CREATE TABLE IF NOT EXISTS "ReminderLog" (
+                "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                "transactionId" INTEGER,
+                "tipo" TEXT NOT NULL,
+                "status" TEXT NOT NULL,
+                "mensagem" TEXT,
+                "erro" TEXT,
+                "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+              )
+            `
+          }
+        ];
+
+        // Verifica e cria cada tabela
+        for (const table of tablesToCreate) {
+          const tables = await this.$queryRaw<Array<{ name: string }>>`
+            SELECT name FROM sqlite_master WHERE type='table' AND name=${table.name}
+          `;
+          
+          if (tables.length === 0) {
+            this.logger.log(`🔄 Criando tabela ${table.name} via SQL direto...`);
+            await this.$executeRawUnsafe(table.sql);
+            this.logger.log(`✅ Tabela ${table.name} criada com sucesso!`);
+          } else {
+            this.logger.log(`✅ Tabela ${table.name} já existe`);
+          }
         }
         
-        // Testa acesso
+        // Testa acesso às tabelas principais
         await this.transaction.count();
-        this.logger.log('✅ Banco de dados pronto e acessível');
+        this.logger.log('✅ Todas as tabelas criadas e banco de dados pronto!');
       } catch (error: any) {
-        this.logger.error('❌ Erro ao verificar/criar tabela:', error.message);
+        this.logger.error('❌ Erro ao verificar/criar tabelas:', error.message);
         // Continua mesmo assim - não bloqueia servidor
       }
     } catch (error) {
