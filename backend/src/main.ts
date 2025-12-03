@@ -38,7 +38,11 @@ async function bootstrap() {
     const port = process.env.PORT || 4000;
     // Render precisa que escutemos em 0.0.0.0, não apenas localhost
     await app.listen(port, '0.0.0.0');
-    console.log(`🚀 Microkids backend rodando na porta ${port}`);
+    console.log(`🚀 Microkids backend rodando na porta ${port} em 0.0.0.0`);
+    
+    // Log importante para debug
+    console.log(`🌐 Servidor acessível em: http://0.0.0.0:${port}`);
+    console.log(`📡 Render deve detectar porta: ${port}`);
   } catch (error) {
     console.error('❌ Erro ao iniciar aplicação:', error);
     process.exit(1);
