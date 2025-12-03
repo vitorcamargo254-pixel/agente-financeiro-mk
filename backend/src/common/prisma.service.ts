@@ -62,84 +62,42 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.$connect();
       this.logger.log('✅ Conectado ao banco de dados');
       
-      // Verificar se as tabelas existem usando SQL direto (mais confiável)
+      // SOLUÇÃO DEFINITIVA: Cria tabela via SQL direto se não existir
       try {
-        // Usa SQL direto para verificar se a tabela existe (evita problema com palavras reservadas)
-        const result = await this.$queryRaw<Array<{ name: string }>>`
-          SELECT name FROM sqlite_master 
-          WHERE type='table' AND name='Transaction'
+        // Verifica se tabela existe
+        const tables = await this.$queryRaw<Array<{ name: string }>>`
+          SELECT name FROM sqlite_master WHERE type='table' AND name='Transaction'
         `;
         
-        if (result.length > 0) {
-          this.logger.log('✅ Tabela Transaction existe no banco de dados');
-          // Tenta uma operação simples para confirmar que está acessível
-          try {
-            await this.transaction.count();
-            this.logger.log('✅ Tabela Transaction está acessível via Prisma Client');
-          } catch (prismaError: any) {
-            this.logger.warn('⚠️ Tabela existe mas Prisma Client não consegue acessar. Regenerando client...');
-            // Tenta regenerar o Prisma Client
-            const { execSync } = require('child_process');
-            execSync('npx prisma generate', { 
-              stdio: 'pipe',
-              cwd: process.cwd(),
-              env: { ...process.env, DATABASE_URL: this.config.get<string>('DATABASE_URL') || 'file:./dev.db' }
-            });
-            // Reconecta
-            await this.$disconnect();
-            await this.$connect();
-            this.logger.log('✅ Prisma Client regenerado e reconectado');
-          }
+        if (tables.length === 0) {
+          this.logger.log('🔄 Criando tabela Transaction via SQL direto...');
+          // Cria tabela diretamente via SQL
+          await this.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "Transaction" (
+              "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+              "descricao" TEXT NOT NULL,
+              "codigo" TEXT NOT NULL UNIQUE,
+              "centroCusto" TEXT NOT NULL,
+              "ndoc" TEXT,
+              "valor" DECIMAL NOT NULL,
+              "status" TEXT NOT NULL DEFAULT 'PENDENTE',
+              "data" DATETIME NOT NULL,
+              "saldo" DECIMAL,
+              "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+          this.logger.log('✅ Tabela Transaction criada com sucesso!');
         } else {
-          throw new Error('Tabela Transaction não existe');
+          this.logger.log('✅ Tabela Transaction já existe');
         }
-      } catch (tableError: any) {
-        this.logger.warn('⚠️ Tabela Transaction não existe. Criando agora...');
         
-        // Tenta criar usando db push com force-reset para garantir
-        try {
-          const { execSync } = require('child_process');
-          const dbUrl = this.config.get<string>('DATABASE_URL') || 'file:./dev.db';
-          
-          this.logger.log('🔄 Executando db push para criar tabelas...');
-          execSync('npx prisma db push --accept-data-loss --skip-generate', { 
-            stdio: 'inherit', // Muda para inherit para ver o output
-            cwd: process.cwd(),
-            env: { ...process.env, DATABASE_URL: dbUrl }
-          });
-          this.logger.log('✅ Schema aplicado com db push');
-          
-          // Regenera Prisma Client após criar tabelas
-          this.logger.log('🔄 Regenerando Prisma Client...');
-          execSync('npx prisma generate', { 
-            stdio: 'pipe',
-            cwd: process.cwd(),
-            env: { ...process.env, DATABASE_URL: dbUrl }
-          });
-          
-          // Reconecta após criar
-          await this.$disconnect();
-          await this.$connect();
-          
-          // Aguarda um pouco para garantir que tudo está pronto
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Verifica novamente usando SQL
-          const verifyResult = await this.$queryRaw<Array<{ name: string }>>`
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name='Transaction'
-          `;
-          
-          if (verifyResult.length > 0) {
-            this.logger.log('✅ Tabela Transaction criada e verificada com sucesso!');
-          } else {
-            throw new Error('Tabela ainda não existe após db push');
-          }
-        } catch (createError: any) {
-          this.logger.error('❌ Erro ao criar tabela:', createError.message);
-          this.logger.warn('⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.');
-          // Não lança erro - continua mesmo assim para não bloquear o servidor
-        }
+        // Testa acesso
+        await this.transaction.count();
+        this.logger.log('✅ Banco de dados pronto e acessível');
+      } catch (error: any) {
+        this.logger.error('❌ Erro ao verificar/criar tabela:', error.message);
+        // Continua mesmo assim - não bloqueia servidor
       }
     } catch (error) {
       this.logger.error('❌ Erro ao conectar ao banco de dados:', error);
