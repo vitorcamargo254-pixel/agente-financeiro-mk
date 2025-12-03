@@ -102,9 +102,12 @@ export class RemindersService {
     let emailsSent = 0;
     let callsMade = 0;
     const errors: string[] = [];
+    let processed = 0;
 
+    // Processa cada transação com timeout individual
     for (const item of upcoming) {
       const { transaction, diasRestantes } = item;
+      try {
       const valorFormatado = Math.abs(Number(transaction.valor)).toLocaleString('pt-BR', {
         style: 'currency',
         currency: 'BRL',
@@ -112,8 +115,9 @@ export class RemindersService {
 
       // Envia e-mail se configurado (com timeout para não travar)
       if (config.enviarEmail && config.emailDestino) {
+        this.logger.log(`📧 Tentando enviar e-mail para ${config.emailDestino} - Transação: ${transaction.descricao}`);
         try {
-          // Timeout de 10 segundos para envio de e-mail
+          // Timeout de 5 segundos para envio de e-mail (reduzido para não travar)
           const emailPromise = this.emailService.sendPaymentReminder(
             config.emailDestino,
             {
@@ -125,7 +129,7 @@ export class RemindersService {
           );
 
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: Envio de e-mail demorou mais de 10 segundos')), 10000)
+            setTimeout(() => reject(new Error('Timeout: Envio de e-mail demorou mais de 5 segundos')), 5000)
           );
 
           const result = await Promise.race([emailPromise, timeoutPromise]) as any;
@@ -228,14 +232,24 @@ export class RemindersService {
           );
         }
       }
+      
+      // Incrementa contador de processadas
+      processed++;
+      } catch (itemError: any) {
+        // Se der erro ao processar uma transação, loga mas continua
+        const errorMsg = `Erro ao processar transação ${transaction.id}: ${itemError.message}`;
+        errors.push(errorMsg);
+        this.logger.error(`❌ ${errorMsg}`);
+        processed++; // Conta como processada mesmo com erro
+      }
     }
 
     this.logger.log(
-      `✅ Processamento concluído: ${upcoming.length} transações, ${emailsSent} e-mails, ${callsMade} ligações`,
+      `✅ Processamento concluído: ${processed}/${upcoming.length} transações processadas, ${emailsSent} e-mails, ${callsMade} ligações`,
     );
 
     return {
-      processed: upcoming.length,
+      processed,
       emailsSent,
       callsMade,
       errors,

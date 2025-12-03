@@ -15,6 +15,12 @@ export class EmailService {
     const emailFrom = this.config.get<string>('EMAIL_FROM') || emailUser;
 
     if (emailHost && emailUser && emailPass) {
+      this.logger.log(`📧 Configurando transporte de e-mail...`);
+      this.logger.log(`   Host: ${emailHost}`);
+      this.logger.log(`   Port: ${emailPort}`);
+      this.logger.log(`   User: ${emailUser}`);
+      this.logger.log(`   Password: ${emailPass ? '***' : 'não configurado'}`);
+      
       this.transporter = nodemailer.createTransport({
         host: emailHost,
         port: emailPort,
@@ -25,9 +31,20 @@ export class EmailService {
         },
       });
 
-      this.logger.log('✅ Serviço de e-mail inicializado');
+      // Testa a conexão
+      try {
+        await this.transporter.verify();
+        this.logger.log('✅ Serviço de e-mail inicializado e verificado com sucesso!');
+      } catch (verifyError: any) {
+        this.logger.error(`❌ Erro ao verificar conexão SMTP: ${verifyError.message}`);
+        this.logger.warn('⚠️ Serviço de e-mail configurado mas conexão falhou. Verifique as credenciais.');
+        // Continua mesmo assim - pode funcionar na hora de enviar
+      }
     } else {
       this.logger.warn('⚠️ E-mail não configurado. Configure EMAIL_HOST, EMAIL_USER e EMAIL_PASSWORD no .env');
+      this.logger.warn(`   EMAIL_HOST: ${emailHost || 'não configurado'}`);
+      this.logger.warn(`   EMAIL_USER: ${emailUser || 'não configurado'}`);
+      this.logger.warn(`   EMAIL_PASSWORD: ${emailPass ? 'configurado' : 'não configurado'}`);
     }
   }
 
@@ -38,7 +55,15 @@ export class EmailService {
     text?: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.transporter) {
-      this.logger.warn('⚠️ Tentativa de enviar e-mail mas serviço não está configurado');
+      const emailHost = this.config.get<string>('EMAIL_HOST');
+      const emailUser = this.config.get<string>('EMAIL_USER');
+      const emailPass = this.config.get<string>('EMAIL_PASSWORD');
+      
+      this.logger.error('❌ TRANSPORTER NÃO ESTÁ CONFIGURADO!');
+      this.logger.error(`   EMAIL_HOST: ${emailHost ? '✅ configurado' : '❌ não configurado'}`);
+      this.logger.error(`   EMAIL_USER: ${emailUser ? '✅ configurado' : '❌ não configurado'}`);
+      this.logger.error(`   EMAIL_PASSWORD: ${emailPass ? '✅ configurado' : '❌ não configurado'}`);
+      
       return {
         success: false,
         error: 'Serviço de e-mail não configurado. Configure as variáveis de ambiente.',
@@ -48,7 +73,8 @@ export class EmailService {
     try {
       const emailFrom = this.config.get<string>('EMAIL_FROM') || this.config.get<string>('EMAIL_USER');
       
-      this.logger.log(`📧 Tentando enviar e-mail para ${to}...`);
+      this.logger.log(`📧 Enviando e-mail de ${emailFrom} para ${to}...`);
+      this.logger.log(`📧 Assunto: ${subject}`);
 
       const info = await this.transporter.sendMail({
         from: emailFrom,
