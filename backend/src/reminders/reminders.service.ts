@@ -117,7 +117,7 @@ export class RemindersService {
       if (config.enviarEmail && config.emailDestino) {
         this.logger.log(`📧 Tentando enviar e-mail para ${config.emailDestino} - Transação: ${transaction.descricao}`);
         try {
-          // Timeout de 5 segundos para envio de e-mail (reduzido para não travar)
+          // Timeout de 15 segundos para envio de e-mail (aumentado para dar tempo de conexão SMTP)
           const emailPromise = this.emailService.sendPaymentReminder(
             config.emailDestino,
             {
@@ -129,7 +129,7 @@ export class RemindersService {
           );
 
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: Envio de e-mail demorou mais de 5 segundos')), 5000)
+            setTimeout(() => reject(new Error('Timeout: Envio de e-mail demorou mais de 15 segundos')), 15000)
           );
 
           const result = await Promise.race([emailPromise, timeoutPromise]) as any;

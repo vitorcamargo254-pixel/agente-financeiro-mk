@@ -29,6 +29,15 @@ export class EmailService {
           user: emailUser,
           pass: emailPass,
         },
+        // Timeouts aumentados para evitar problemas de conexão
+        connectionTimeout: 10000, // 10 segundos para conectar
+        greetingTimeout: 10000, // 10 segundos para greeting
+        socketTimeout: 10000, // 10 segundos para operações de socket
+        // Tenta usar TLS se disponível
+        requireTLS: false,
+        tls: {
+          rejectUnauthorized: false, // Aceita certificados auto-assinados
+        },
       });
 
       this.logger.log('✅ Serviço de e-mail inicializado');
