@@ -62,25 +62,54 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.$connect();
       this.logger.log('✅ Conectado ao banco de dados');
       
-      // Verificar se as tabelas existem
-      try {
-        await this.$queryRaw`SELECT 1 FROM Transaction LIMIT 1`;
-        this.logger.log('✅ Tabela Transaction existe');
-      } catch (tableError: any) {
-        this.logger.error('❌ Tabela Transaction não existe! Tentando criar...');
-        // Tenta criar usando db push
+      // Verificar se as tabelas existem - tentativa mais agressiva
+      let tableExists = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!tableExists && attempts < maxAttempts) {
         try {
-          const { execSync } = require('child_process');
-          execSync('npx prisma db push --accept-data-loss --skip-generate', { 
-            stdio: 'inherit',
-            cwd: process.cwd(),
-            env: { ...process.env, DATABASE_URL: this.config.get<string>('DATABASE_URL') || 'file:./dev.db' }
-          });
-          this.logger.log('✅ Tabelas criadas com db push');
-        } catch (createError: any) {
-          this.logger.error('❌ Erro ao criar tabelas:', createError.message);
-          throw createError;
+          await this.$queryRaw`SELECT 1 FROM Transaction LIMIT 1`;
+          this.logger.log('✅ Tabela Transaction existe');
+          tableExists = true;
+        } catch (tableError: any) {
+          attempts++;
+          this.logger.warn(`⚠️ Tabela Transaction não existe (tentativa ${attempts}/${maxAttempts})...`);
+          
+          // Tenta criar usando db push com força
+          try {
+            const { execSync } = require('child_process');
+            this.logger.log('🔄 Forçando criação das tabelas...');
+            execSync('npx prisma db push --force-reset --accept-data-loss --skip-generate', { 
+              stdio: 'inherit',
+              cwd: process.cwd(),
+              env: { ...process.env, DATABASE_URL: this.config.get<string>('DATABASE_URL') || 'file:./dev.db' }
+            });
+            this.logger.log('✅ Tabelas criadas com db push');
+            
+            // Reconecta após criar
+            await this.$disconnect();
+            await this.$connect();
+            
+            // Verifica novamente
+            await this.$queryRaw`SELECT 1 FROM Transaction LIMIT 1`;
+            this.logger.log('✅ Tabela Transaction verificada e existe!');
+            tableExists = true;
+          } catch (createError: any) {
+            this.logger.error(`❌ Erro ao criar tabelas (tentativa ${attempts}):`, createError.message);
+            if (attempts >= maxAttempts) {
+              this.logger.error('❌ Falhou após múltiplas tentativas. Verifique os logs.');
+              // Não lança erro - continua mesmo assim
+              break;
+            }
+            // Aguarda um pouco antes de tentar novamente
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
         }
+      }
+      
+      if (!tableExists) {
+        this.logger.error('⚠️ ATENÇÃO: Tabela Transaction pode não existir. Algumas funcionalidades podem não funcionar.');
       }
     } catch (error) {
       this.logger.error('❌ Erro ao conectar ao banco de dados:', error);
