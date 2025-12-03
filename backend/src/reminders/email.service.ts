@@ -31,20 +31,33 @@ export class EmailService {
         },
       });
 
-      // Testa a conexão
-      try {
-        await this.transporter.verify();
-        this.logger.log('✅ Serviço de e-mail inicializado e verificado com sucesso!');
-      } catch (verifyError: any) {
-        this.logger.error(`❌ Erro ao verificar conexão SMTP: ${verifyError.message}`);
-        this.logger.warn('⚠️ Serviço de e-mail configurado mas conexão falhou. Verifique as credenciais.');
-        // Continua mesmo assim - pode funcionar na hora de enviar
-      }
+      this.logger.log('✅ Serviço de e-mail inicializado');
+      
+      // Verifica conexão de forma assíncrona (não bloqueia inicialização)
+      this.verifyConnection().catch(() => {
+        // Erro já foi logado no método verifyConnection
+      });
     } else {
       this.logger.warn('⚠️ E-mail não configurado. Configure EMAIL_HOST, EMAIL_USER e EMAIL_PASSWORD no .env');
       this.logger.warn(`   EMAIL_HOST: ${emailHost || 'não configurado'}`);
       this.logger.warn(`   EMAIL_USER: ${emailUser || 'não configurado'}`);
       this.logger.warn(`   EMAIL_PASSWORD: ${emailPass ? 'configurado' : 'não configurado'}`);
+    }
+  }
+
+  /**
+   * Verifica a conexão SMTP de forma assíncrona
+   */
+  private async verifyConnection(): Promise<void> {
+    if (!this.transporter) return;
+    
+    try {
+      await this.transporter.verify();
+      this.logger.log('✅ Conexão SMTP verificada com sucesso!');
+    } catch (verifyError: any) {
+      this.logger.error(`❌ Erro ao verificar conexão SMTP: ${verifyError.message}`);
+      this.logger.warn('⚠️ Serviço de e-mail configurado mas conexão falhou. Verifique as credenciais.');
+      // Continua mesmo assim - pode funcionar na hora de enviar
     }
   }
 
