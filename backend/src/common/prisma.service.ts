@@ -62,35 +62,81 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.$connect();
       this.logger.log('✅ Conectado ao banco de dados');
       
-      // Verificar se as tabelas existem usando Prisma Client diretamente
-      // Isso é mais confiável que queryRaw com palavras reservadas
+      // Verificar se as tabelas existem usando SQL direto (mais confiável)
       try {
-        // Tenta fazer uma operação simples que só funciona se a tabela existir
-        const count = await this.transaction.count();
-        this.logger.log('✅ Tabela Transaction existe e está acessível');
-      } catch (tableError: any) {
-        this.logger.warn('⚠️ Tabela Transaction não está acessível. Tentando criar...');
+        // Usa SQL direto para verificar se a tabela existe (evita problema com palavras reservadas)
+        const result = await this.$queryRaw<Array<{ name: string }>>`
+          SELECT name FROM sqlite_master 
+          WHERE type='table' AND name='Transaction'
+        `;
         
-        // Tenta criar usando db push
+        if (result.length > 0) {
+          this.logger.log('✅ Tabela Transaction existe no banco de dados');
+          // Tenta uma operação simples para confirmar que está acessível
+          try {
+            await this.transaction.count();
+            this.logger.log('✅ Tabela Transaction está acessível via Prisma Client');
+          } catch (prismaError: any) {
+            this.logger.warn('⚠️ Tabela existe mas Prisma Client não consegue acessar. Regenerando client...');
+            // Tenta regenerar o Prisma Client
+            const { execSync } = require('child_process');
+            execSync('npx prisma generate', { 
+              stdio: 'pipe',
+              cwd: process.cwd(),
+              env: { ...process.env, DATABASE_URL: this.config.get<string>('DATABASE_URL') || 'file:./dev.db' }
+            });
+            // Reconecta
+            await this.$disconnect();
+            await this.$connect();
+            this.logger.log('✅ Prisma Client regenerado e reconectado');
+          }
+        } else {
+          throw new Error('Tabela Transaction não existe');
+        }
+      } catch (tableError: any) {
+        this.logger.warn('⚠️ Tabela Transaction não existe. Criando agora...');
+        
+        // Tenta criar usando db push com force-reset para garantir
         try {
           const { execSync } = require('child_process');
-          this.logger.log('🔄 Forçando criação das tabelas com db push...');
+          const dbUrl = this.config.get<string>('DATABASE_URL') || 'file:./dev.db';
+          
+          this.logger.log('🔄 Executando db push para criar tabelas...');
           execSync('npx prisma db push --accept-data-loss --skip-generate', { 
-            stdio: 'pipe',
+            stdio: 'inherit', // Muda para inherit para ver o output
             cwd: process.cwd(),
-            env: { ...process.env, DATABASE_URL: this.config.get<string>('DATABASE_URL') || 'file:./dev.db' }
+            env: { ...process.env, DATABASE_URL: dbUrl }
           });
           this.logger.log('✅ Schema aplicado com db push');
+          
+          // Regenera Prisma Client após criar tabelas
+          this.logger.log('🔄 Regenerando Prisma Client...');
+          execSync('npx prisma generate', { 
+            stdio: 'pipe',
+            cwd: process.cwd(),
+            env: { ...process.env, DATABASE_URL: dbUrl }
+          });
           
           // Reconecta após criar
           await this.$disconnect();
           await this.$connect();
           
-          // Verifica novamente usando Prisma Client
-          const count = await this.transaction.count();
-          this.logger.log('✅ Tabela Transaction criada e verificada!');
+          // Aguarda um pouco para garantir que tudo está pronto
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verifica novamente usando SQL
+          const verifyResult = await this.$queryRaw<Array<{ name: string }>>`
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='Transaction'
+          `;
+          
+          if (verifyResult.length > 0) {
+            this.logger.log('✅ Tabela Transaction criada e verificada com sucesso!');
+          } else {
+            throw new Error('Tabela ainda não existe após db push');
+          }
         } catch (createError: any) {
-          this.logger.warn('⚠️ Aviso: Não foi possível verificar/criar tabela automaticamente:', createError.message);
+          this.logger.error('❌ Erro ao criar tabela:', createError.message);
           this.logger.warn('⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.');
           // Não lança erro - continua mesmo assim para não bloquear o servidor
         }
