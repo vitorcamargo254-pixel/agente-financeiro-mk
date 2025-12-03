@@ -1,0 +1,13 @@
+Fix: Adicionar timeout no envio de e-mails e melhorar criação de tabelas
+
+- Adiciona timeout de 10 segundos por e-mail para evitar travamento no processamento
+- Melhora logs de envio de e-mail com mais detalhes e tratamento de erros
+- Cria todas as tabelas necessárias (Transaction, ReminderConfig, ReminderLog) via SQL direto
+- Melhora tratamento de erros no processamento de lembretes para continuar mesmo se um e-mail falhar
+- Adiciona logs mais detalhados para facilitar diagnóstico de problemas
+
+Arquivos modificados:
+- backend/src/reminders/reminders.service.ts
+- backend/src/reminders/email.service.ts
+- backend/src/common/prisma.service.ts
+

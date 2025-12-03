@@ -110,10 +110,11 @@ export class RemindersService {
         currency: 'BRL',
       });
 
-      // Envia e-mail se configurado
+      // Envia e-mail se configurado (com timeout para não travar)
       if (config.enviarEmail && config.emailDestino) {
         try {
-          const result = await this.emailService.sendPaymentReminder(
+          // Timeout de 10 segundos para envio de e-mail
+          const emailPromise = this.emailService.sendPaymentReminder(
             config.emailDestino,
             {
               descricao: transaction.descricao,
@@ -123,8 +124,15 @@ export class RemindersService {
             },
           );
 
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout: Envio de e-mail demorou mais de 10 segundos')), 10000)
+          );
+
+          const result = await Promise.race([emailPromise, timeoutPromise]) as any;
+
           if (result.success) {
             emailsSent++;
+            this.logger.log(`✅ E-mail enviado para ${config.emailDestino} - ${transaction.descricao}`);
             await this.prisma.reminderLog.create({
               data: {
                 transactionId: transaction.id,
@@ -134,7 +142,9 @@ export class RemindersService {
               },
             });
           } else {
-            errors.push(`Erro ao enviar e-mail: ${result.error}`);
+            const errorMsg = `Erro ao enviar e-mail: ${result.error}`;
+            errors.push(errorMsg);
+            this.logger.warn(`⚠️ ${errorMsg}`);
             await this.prisma.reminderLog.create({
               data: {
                 transactionId: transaction.id,
@@ -144,8 +154,23 @@ export class RemindersService {
               },
             });
           }
-        } catch (error) {
-          errors.push(`Erro ao enviar e-mail: ${error.message}`);
+        } catch (error: any) {
+          const errorMsg = `Erro ao enviar e-mail: ${error.message}`;
+          errors.push(errorMsg);
+          this.logger.error(`❌ ${errorMsg}`);
+          // Cria log mesmo em caso de erro
+          try {
+            await this.prisma.reminderLog.create({
+              data: {
+                transactionId: transaction.id,
+                tipo: 'EMAIL',
+                status: 'FAILED',
+                erro: error.message,
+              },
+            });
+          } catch (logError) {
+            // Ignora erro ao criar log
+          }
         }
       }
 

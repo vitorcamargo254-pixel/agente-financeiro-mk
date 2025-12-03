@@ -38,6 +38,7 @@ export class EmailService {
     text?: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.transporter) {
+      this.logger.warn('⚠️ Tentativa de enviar e-mail mas serviço não está configurado');
       return {
         success: false,
         error: 'Serviço de e-mail não configurado. Configure as variáveis de ambiente.',
@@ -46,6 +47,8 @@ export class EmailService {
 
     try {
       const emailFrom = this.config.get<string>('EMAIL_FROM') || this.config.get<string>('EMAIL_USER');
+      
+      this.logger.log(`📧 Tentando enviar e-mail para ${to}...`);
 
       const info = await this.transporter.sendMail({
         from: emailFrom,
@@ -60,11 +63,13 @@ export class EmailService {
         success: true,
         messageId: info.messageId,
       };
-    } catch (error) {
-      this.logger.error(`❌ Erro ao enviar e-mail: ${error.message}`, error);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Erro desconhecido ao enviar e-mail';
+      this.logger.error(`❌ Erro ao enviar e-mail para ${to}: ${errorMessage}`);
+      this.logger.error(`❌ Detalhes do erro:`, error);
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
