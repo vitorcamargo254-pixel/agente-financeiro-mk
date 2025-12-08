@@ -14,18 +14,9 @@ export class FinanceSyncService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    // Tenta múltiplos caminhos possíveis
-    const possiblePaths = [
-      this.config.get<string>('PATH_EXCEL'), // Caminho do .env
-      path.join(process.cwd(), 'Financeiro_ETC-.xlsm'), // Pasta raiz do backend
-      path.join(process.cwd(), 'backend', 'Financeiro_ETC-.xlsm'), // Se estiver na raiz do projeto
-    ].filter(Boolean) as string[];
-
-    // Encontra o primeiro arquivo que existe
-    this.excelPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0] || path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
-    
-    this.logger.log(`📁 Caminhos testados: ${possiblePaths.join(', ')}`);
-    this.logger.log(`✅ Usando caminho: ${this.excelPath}`);
+    this.excelPath =
+      this.config.get<string>('PATH_EXCEL') ||
+      path.join(process.cwd(), 'financeiro.xlsx');
   }
 
   async syncFromExcel(): Promise<{ imported: number }> {
@@ -41,6 +32,28 @@ export class FinanceSyncService {
     return { imported };
   }
 
+  async syncFromUploadedFile(file: { buffer: Buffer; originalname: string }): Promise<{ imported: number }> {
+    this.logger.log(`📤 Processando arquivo enviado: ${file.originalname}`);
+
+    // Passo 1: Converter Excel do buffer para JSON (em memória)
+    const transactions = await this.convertExcelBufferToJson(file.buffer);
+
+    // Passo 2: Importar para banco
+    const imported = await this.importJsonToDb(transactions);
+
+    this.logger.log(`✅ Sincronização concluída: ${imported} transações importadas do arquivo ${file.originalname}`);
+    return { imported };
+  }
+
+  private async convertExcelBufferToJson(buffer: Buffer) {
+    this.logger.log('📊 Convertendo Excel (buffer) para JSON...');
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+
+    return this.processWorkbook(workbook);
+  }
+
   private async convertExcelToJson() {
     this.logger.log('📊 Convertendo Excel para JSON...');
 
@@ -50,6 +63,11 @@ export class FinanceSyncService {
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(this.excelPath);
+
+    return this.processWorkbook(workbook);
+  }
+
+  private async processWorkbook(workbook: ExcelJS.Workbook) {
 
     const sheet = workbook.getWorksheet('Dados') || workbook.worksheets[0];
     this.logger.log(`Usando planilha: ${sheet.name}`);
@@ -603,33 +621,8 @@ export class FinanceSyncService {
     this.logger.log('📥 Importando para banco de dados...');
 
     // Limpa o banco
-    // Verificar se a tabela existe antes de tentar deletar
-    try {
-      // Tenta executar migrations se necessário
-      const { execSync } = require('child_process');
-      try {
-        execSync('npx prisma migrate deploy', { stdio: 'pipe' });
-        this.logger.log('✅ Migrations verificadas');
-      } catch (migrationError) {
-        this.logger.warn('⚠️ Aviso ao executar migrations:', migrationError);
-      }
-      
-      // Verifica se consegue acessar a tabela
-      await this.prisma.$queryRaw`SELECT 1 FROM Transaction LIMIT 1`;
-      const deleted = await this.prisma.transaction.deleteMany({});
-      this.logger.log(`🗑️ ${deleted.count} transações antigas removidas`);
-    } catch (error: any) {
-      // Se a tabela não existe, cria ela primeiro
-      if (error.message?.includes('does not exist') || error.code === 'P2021') {
-        this.logger.warn('⚠️ Tabela não existe, tentando criar...');
-        const { execSync } = require('child_process');
-        execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-        this.logger.log('✅ Tabela criada, continuando...');
-      } else {
-        // Se for outro erro, apenas loga e continua
-        this.logger.warn('⚠️ Erro ao limpar transações antigas:', error.message);
-      }
-    }
+    const deleted = await this.prisma.transaction.deleteMany({});
+    this.logger.log(`Removidas ${deleted.count} transações antigas`);
 
     let imported = 0;
     const batchSize = 100;

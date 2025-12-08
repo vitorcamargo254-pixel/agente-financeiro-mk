@@ -7,7 +7,11 @@ import {
   Body,
   Param,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { FinanceService } from './finance.service';
 import { FinanceSyncService } from './finance-sync.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -114,6 +118,46 @@ export class FinanceController {
       return {
         success: false,
         message: `Erro na sincronização: ${error.message || 'Erro desconhecido'}`,
+        error: error.message || String(error),
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      };
+    }
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadExcel(@UploadedFile() file: any) {
+    try {
+      if (!file) {
+        throw new BadRequestException('Nenhum arquivo foi enviado');
+      }
+
+      // Valida se é um arquivo Excel
+      const allowedMimes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        'application/octet-stream', // Alguns navegadores enviam assim
+      ];
+
+      const fileExtension = file.originalname.toLowerCase().split('.').pop();
+      if (!['xlsx', 'xls'].includes(fileExtension)) {
+        throw new BadRequestException('Apenas arquivos Excel (.xlsx ou .xls) são permitidos');
+      }
+
+      // Sincroniza usando o arquivo enviado
+      const result = await this.financeSyncService.syncFromUploadedFile(file);
+      
+      return {
+        success: true,
+        message: `Planilha enviada e sincronizada com sucesso!`,
+        imported: result.imported,
+        filename: file.originalname,
+      };
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      return {
+        success: false,
+        message: `Erro ao processar planilha: ${error.message || 'Erro desconhecido'}`,
         error: error.message || String(error),
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       };

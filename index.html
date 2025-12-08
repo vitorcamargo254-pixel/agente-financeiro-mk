@@ -86,7 +86,11 @@
           </div>
           <div class="flex gap-2">
             <button id="btn-clear" class="px-4 py-2 bg-gray-200 rounded-lg">Limpar</button>
-            <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados com n8n"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
+            <label for="file-upload" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition flex items-center gap-2">
+              <i class="fa-solid fa-upload"></i> Enviar Planilha
+            </label>
+            <input type="file" id="file-upload" accept=".xlsx,.xls" class="hidden" />
+            <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados do servidor"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
           </div>
         </div>
       </div>
@@ -383,43 +387,29 @@
   </div>
 
   <script>
-  // Backend - Detectar ambiente automaticamente
-  // Para desenvolvimento local ou produção online:
-  // IMPORTANTE: Se o backend estiver em uma URL diferente, altere abaixo:
+  // Backend - Ajuste conforme seu deploy
+  // Detecta automaticamente se está em produção ou desenvolvimento
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:4000'
+    : 'https://agente-financeiro-mk-backend.onrender.com';
   
-  // Detectar ambiente
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  // Log para debug
+  console.log('🌐 API_BASE configurado para:', API_BASE);
   
-  // Configurar API_BASE
-  let API_BASE;
-  if (isLocal) {
-    API_BASE = 'http://localhost:4000';
-  } else {
-    // URL do backend no Render (ATUALIZADA!)
-    API_BASE = 'https://agente-financeiro-mk-backend.onrender.com';
-  }
-  
-  console.log('🔗 API_BASE configurado para:', API_BASE);
-  console.log('🌐 Hostname atual:', window.location.hostname);
-  
-  // Função para testar conexão com o backend
+  // Testa conexão com backend
   async function testBackendConnection() {
     try {
-      const response = await fetch(`${API_BASE}/health`, { 
-        method: 'GET',
-        mode: 'cors',
-        cache: 'no-cache'
-      });
-      if (response.ok) {
+      const res = await fetch(`${API_BASE}/health`);
+      if (res.ok) {
         console.log('✅ Backend conectado com sucesso!');
-        return true;
+      } else {
+        console.warn('⚠️ Backend respondeu com erro:', res.status);
       }
-    } catch (error) {
-      console.error('❌ Erro ao conectar com backend:', error);
-      console.error('⚠️ Verifique se a URL do backend está correta:', API_BASE);
-      return false;
+    } catch (err) {
+      console.error('❌ Erro ao conectar com backend:', err);
     }
   }
+  testBackendConnection();
 
   const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
   const DATE_BR = new Intl.DateTimeFormat('pt-BR');
@@ -579,18 +569,7 @@
     } catch (err) {
       console.error('[syncFromBackend] Erro completo:', err);
       const errorMsg = err.message || 'Erro desconhecido';
-      
-      // Mensagem de erro melhorada
-      let detailedError = `❌ Erro ao sincronizar:\n\n${errorMsg}\n\n`;
-      detailedError += `🔗 URL do Backend tentada: ${API_BASE}\n\n`;
-      detailedError += `📋 Verifique:\n`;
-      detailedError += `1. Se a URL do backend está correta (veja no console F12)\n`;
-      detailedError += `2. Se o backend está online no Render.com\n`;
-      detailedError += `3. Se o arquivo Excel está na pasta backend/\n`;
-      detailedError += `4. Abra o console (F12) para mais detalhes\n\n`;
-      detailedError += `💡 Dica: Vá em render.com → Seu Backend → Copie a URL e me envie!`;
-      
-      alert(detailedError);
+      alert(`❌ Erro ao sincronizar:\n\n${errorMsg}\n\nVerifique:\n1. Se o servidor está rodando na porta 4000\n2. Se o arquivo Excel está no caminho correto\n3. Abra o console (F12) para mais detalhes`);
     } finally {
       // Reabilita o botão
       btnSync.disabled = false;
@@ -841,6 +820,59 @@
     document.getElementById('category-filter').addEventListener('change', applyFilters);
     document.getElementById('btn-clear').addEventListener('click', () => { document.getElementById('search-input').value=''; document.getElementById('status-filter').value=''; document.getElementById('category-filter').value=''; filteredData = [...financialData]; updateAll(); });
     document.getElementById('btn-sync').addEventListener('click', syncFromBackend);
+    
+    // Upload de planilha Excel
+    const fileUpload = document.getElementById('file-upload');
+    fileUpload.addEventListener('change', async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      // Valida extensão
+      const fileName = file.name.toLowerCase();
+      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        alert('❌ Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
+      const originalText = btnUpload.innerHTML;
+      
+      try {
+        btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+        btnUpload.style.pointerEvents = 'none';
+        
+        console.log(`📤 Enviando arquivo: ${file.name}`);
+        const res = await fetch(`${API_BASE}/finance/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || data.error || `Erro HTTP ${res.status}`);
+        }
+        
+        alert(`✅ Planilha enviada e sincronizada com sucesso!\n\n${data.imported} transações importadas.`);
+        
+        // Recarrega os dados
+        await loadTransactions();
+        await loadSummary();
+        updateAll();
+        
+        // Limpa o input
+        (e.target as HTMLInputElement).value = '';
+      } catch (err) {
+        console.error('[Upload] Erro:', err);
+        alert(`❌ Erro ao enviar planilha:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
+      } finally {
+        btnUpload.innerHTML = originalText;
+        btnUpload.style.pointerEvents = 'auto';
+      }
+    });
 
     const aiInput = document.getElementById('assistant-input');
     const aiSend = document.getElementById('assistant-send');
