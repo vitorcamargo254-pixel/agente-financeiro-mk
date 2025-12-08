@@ -140,8 +140,8 @@ export class FinanceController {
       ];
 
       const fileExtension = file.originalname.toLowerCase().split('.').pop();
-      if (!['xlsx', 'xls'].includes(fileExtension)) {
-        throw new BadRequestException('Apenas arquivos Excel (.xlsx ou .xls) são permitidos');
+      if (!['xlsx', 'xls', 'xlsm'].includes(fileExtension)) {
+        throw new BadRequestException('Apenas arquivos Excel (.xlsx, .xls ou .xlsm) são permitidos');
       }
 
       // Sincroniza usando o arquivo enviado

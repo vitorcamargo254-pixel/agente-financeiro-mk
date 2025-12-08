@@ -1,0 +1,41 @@
+// Cria um input de arquivo
+const input = document.createElement('input');
+input.type = 'file';
+input.accept = '.xlsx,.xls,.xlsm';
+input.style.display = 'none';
+document.body.appendChild(input);
+
+// Quando selecionar arquivo
+input.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  console.log('📤 Enviando arquivo:', file.name);
+  
+  try {
+    const res = await fetch('https://agente-financeiro-mk-backend.onrender.com/finance/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const data = await res.json();
+    console.log('📥 Resposta:', data);
+    
+    if (data.success) {
+      alert(`✅ Sucesso! ${data.imported} transações importadas.`);
+      location.reload(); // Recarrega a página
+    } else {
+      alert(`❌ Erro: ${data.message || data.error}`);
+    }
+  } catch (err) {
+    console.error('Erro:', err);
+    alert(`❌ Erro: ${err.message}`);
+  }
+});
+
+// Abre o seletor de arquivo
+input.click();
+
