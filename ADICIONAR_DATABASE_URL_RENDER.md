@@ -83,3 +83,5 @@ Após o deploy:
 4. 🔧 Adicionar `DATABASE_URL` = `file:./dev.db`
 5. ✅ Deploy funcionando
 
+
+

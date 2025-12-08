@@ -91,3 +91,5 @@ Nesse caso, me envie os logs do backend (Render → Backend → Logs)
 5. ✅ Testar sincronização
 6. ✅ Me enviar erros se houver
 
+
+

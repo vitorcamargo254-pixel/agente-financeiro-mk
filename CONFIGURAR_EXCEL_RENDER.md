@@ -42,3 +42,5 @@ Se o arquivo não aparecer no deploy:
 - Ele será incluído no deploy automático
 - Não precisa mais de caminhos locais do Windows
 
+
+

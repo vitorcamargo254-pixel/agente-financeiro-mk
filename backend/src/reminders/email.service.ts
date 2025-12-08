@@ -30,14 +30,19 @@ export class EmailService {
           pass: emailPass,
         },
         // Timeouts aumentados para evitar problemas de conexão
-        connectionTimeout: 10000, // 10 segundos para conectar
-        greetingTimeout: 10000, // 10 segundos para greeting
-        socketTimeout: 10000, // 10 segundos para operações de socket
+        connectionTimeout: 20000, // 20 segundos para conectar
+        greetingTimeout: 20000, // 20 segundos para greeting
+        socketTimeout: 20000, // 20 segundos para operações de socket
         // Tenta usar TLS se disponível
-        requireTLS: false,
+        requireTLS: emailPort === 587, // Requer TLS na porta 587
         tls: {
           rejectUnauthorized: false, // Aceita certificados auto-assinados
+          ciphers: 'SSLv3', // Tenta diferentes ciphers
         },
+        // Pool de conexões para melhor performance
+        pool: true,
+        maxConnections: 1,
+        maxMessages: 3,
       });
 
       this.logger.log('✅ Serviço de e-mail inicializado');
@@ -56,16 +61,25 @@ export class EmailService {
 
   /**
    * Verifica a conexão SMTP de forma assíncrona
+   * Nota: Alguns provedores (como Render) podem bloquear conexões SMTP de saída
+   * A verificação pode falhar, mas o envio pode funcionar na hora de usar
    */
   private async verifyConnection(): Promise<void> {
     if (!this.transporter) return;
     
     try {
-      await this.transporter.verify();
+      // Timeout curto para verificação (não bloqueia inicialização)
+      const verifyPromise = this.transporter.verify();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout na verificação')), 5000)
+      );
+      
+      await Promise.race([verifyPromise, timeoutPromise]);
       this.logger.log('✅ Conexão SMTP verificada com sucesso!');
     } catch (verifyError: any) {
-      this.logger.error(`❌ Erro ao verificar conexão SMTP: ${verifyError.message}`);
-      this.logger.warn('⚠️ Serviço de e-mail configurado mas conexão falhou. Verifique as credenciais.');
+      this.logger.warn(`⚠️ Verificação SMTP falhou: ${verifyError.message}`);
+      this.logger.warn('⚠️ Isso é normal em alguns ambientes (ex: Render pode bloquear SMTP de saída)');
+      this.logger.warn('⚠️ O envio será tentado mesmo assim quando necessário');
       // Continua mesmo assim - pode funcionar na hora de enviar
     }
   }

@@ -23,3 +23,5 @@ fi
 echo "✅ Banco de dados inicializado com sucesso!"
 exit 0
 
+
+

@@ -81,3 +81,5 @@ O problema é que `DATABASE_URL` não está configurada ou está incorreta.
 
 **Solução:** Configure como `file:./dev.db` no Render → Backend → Environment
 
+
+

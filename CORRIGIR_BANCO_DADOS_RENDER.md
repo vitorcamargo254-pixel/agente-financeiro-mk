@@ -120,3 +120,5 @@ Após o deploy:
 3. 🔧 Adicionar `npx prisma migrate deploy` no Build Command
 4. ✅ Testar sincronização
 
+
+

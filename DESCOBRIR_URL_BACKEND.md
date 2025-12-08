@@ -45,3 +45,5 @@
 2. Aguarde o deploy do frontend (1-2 minutos)
 3. Teste novamente a sincronização
 
+
+

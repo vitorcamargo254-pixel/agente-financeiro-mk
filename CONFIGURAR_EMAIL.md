@@ -127,3 +127,5 @@ EMAIL_FROM = seuemail@gmail.com
 
 Depois de configurar, teste novamente! 📧
 
+
+
