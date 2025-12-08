@@ -58,11 +58,12 @@ export class FinanceSyncService {
     return { imported };
   }
 
-  private async convertExcelBufferToJson(buffer: Buffer) {
+  private async convertExcelBufferToJson(buffer: Buffer): Promise<any[]> {
     this.logger.log('📊 Convertendo Excel (buffer) para JSON...');
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    // Cast explícito para resolver incompatibilidade de tipos do TypeScript
+    await workbook.xlsx.load(buffer as any);
 
     return this.processWorkbook(workbook);
   }
