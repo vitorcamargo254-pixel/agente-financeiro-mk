@@ -75,4 +75,3 @@ backend
 Estamos quase lá! Essa solução garante que as migrations sempre sejam executadas. Depois do deploy, teste e me avise!
 
 
-

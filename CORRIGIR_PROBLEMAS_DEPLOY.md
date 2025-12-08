@@ -143,4 +143,3 @@ Se o arquivo Excel estiver muito grande ou você não quiser commitá-lo no Git:
 **Depois disso, tudo deve funcionar!** 🚀
 
 
-

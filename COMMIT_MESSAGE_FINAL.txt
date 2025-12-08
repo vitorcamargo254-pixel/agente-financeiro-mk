@@ -11,4 +11,3 @@ Arquivos modificados:
 - backend/src/reminders/reminders.service.ts
 
 
-

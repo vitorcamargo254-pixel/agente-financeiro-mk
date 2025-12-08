@@ -92,4 +92,3 @@ Me envie:
 3. Screenshot das variáveis de ambiente no Render
 
 
-

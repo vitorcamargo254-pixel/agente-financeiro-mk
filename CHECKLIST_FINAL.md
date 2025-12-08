@@ -92,4 +92,3 @@ Nesse caso, me envie os logs do backend (Render → Backend → Logs)
 6. ✅ Me enviar erros se houver
 
 
-

@@ -141,4 +141,3 @@ OU edite o arquivo `index.html` localmente:
 Se tiver dúvida em algum passo, me avise! Vou te ajudar! 💪
 
 
-

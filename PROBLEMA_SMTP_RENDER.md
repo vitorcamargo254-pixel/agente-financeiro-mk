@@ -75,4 +75,3 @@ Em vez de SMTP, usar Gmail API diretamente (requer mais código).
 A verificação de conexão pode falhar, mas o envio pode funcionar na hora de usar. O código já está preparado para tentar enviar mesmo se a verificação falhar.
 
 
-

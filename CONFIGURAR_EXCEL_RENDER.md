@@ -43,4 +43,3 @@ Se o arquivo não aparecer no deploy:
 - Não precisa mais de caminhos locais do Windows
 
 
-
