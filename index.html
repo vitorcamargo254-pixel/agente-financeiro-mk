@@ -535,41 +535,22 @@
     const originalText = btnSync.innerHTML;
     
     try {
-      console.log('🔄 Iniciando sincronização...');
+      console.log('🔄 Atualizando dados do banco...');
       // Desabilita o botão e mostra loading
       btnSync.disabled = true;
-      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...';
+      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';
       
-      console.log(`📡 Chamando: ${API_BASE}/finance/sync`);
-      const res = await fetch(`${API_BASE}/finance/sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // Apenas recarrega os dados do banco (não tenta ler Excel local)
+      await loadTransactions();
+      await loadSummary();
+      updateAll();
       
-      console.log(`📥 Resposta recebida: status ${res.status}`);
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`HTTP ${res.status}: ${errorText}`);
-      }
-      
-      const data = await res.json();
-      console.log('📊 Dados recebidos:', data);
-      
-      if (data.success) {
-        alert(`✅ Sincronização concluída!\n\n${data.imported} transações importadas.`);
-        // Recarrega os dados
-        await loadTransactions();
-        await loadSummary();
-      } else {
-        alert(`❌ Erro na sincronização:\n\n${data.message || data.error || 'Erro desconhecido'}`);
-      }
+      console.log('✅ Dados atualizados com sucesso!');
+      // Não mostra alert, apenas atualiza silenciosamente
     } catch (err) {
       console.error('[syncFromBackend] Erro completo:', err);
       const errorMsg = err.message || 'Erro desconhecido';
-      alert(`❌ Erro ao sincronizar:\n\n${errorMsg}\n\nVerifique:\n1. Se o servidor está rodando na porta 4000\n2. Se o arquivo Excel está no caminho correto\n3. Abra o console (F12) para mais detalhes`);
+      alert(`❌ Erro ao atualizar dados:\n\n${errorMsg}\n\nAbra o console (F12) para mais detalhes`);
     } finally {
       // Reabilita o botão
       btnSync.disabled = false;
