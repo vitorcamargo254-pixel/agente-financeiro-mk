@@ -22,36 +22,16 @@ export class ExcelService {
   private readonly excelPath: string;
 
   constructor(private readonly config: ConfigService) {
-    // Tenta múltiplos caminhos possíveis
-    const possiblePaths = [
-      this.config.get<string>('PATH_EXCEL'), // Caminho do .env
-      path.join(process.cwd(), 'Financeiro_ETC-.xlsm'), // Pasta raiz do backend
-      path.join(process.cwd(), 'backend', 'Financeiro_ETC-.xlsm'), // Se estiver na raiz do projeto
-      path.join(__dirname, '..', '..', '..', 'Financeiro_ETC-.xlsm'), // Relativo ao código
-    ].filter(Boolean) as string[];
-
-    // Encontra o primeiro arquivo que existe
-    this.excelPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0] || path.join(process.cwd(), 'Financeiro_ETC-.xlsm');
-    
-    this.logger.log(`📁 Caminhos testados: ${possiblePaths.join(', ')}`);
-    this.logger.log(`✅ Usando caminho: ${this.excelPath}`);
+    this.excelPath =
+      this.config.get<string>('PATH_EXCEL') ||
+      path.join(process.cwd(), 'financeiro.xlsx');
   }
 
   async loadWorkbook(): Promise<ExcelJS.Workbook> {
-    this.logger.log(`📂 Tentando carregar Excel de: ${this.excelPath}`);
-    this.logger.log(`📂 Diretório atual: ${process.cwd()}`);
-    this.logger.log(`📂 Arquivo existe? ${fs.existsSync(this.excelPath)}`);
+    this.logger.log(`Tentando carregar Excel de: ${this.excelPath}`);
     
     if (!fs.existsSync(this.excelPath)) {
-      // Lista arquivos no diretório atual para debug
-      try {
-        const files = fs.readdirSync(process.cwd());
-        this.logger.error(`📁 Arquivos no diretório atual: ${files.join(', ')}`);
-      } catch (e) {
-        this.logger.error(`Erro ao listar arquivos: ${e}`);
-      }
-      
-      const errorMsg = `Arquivo Excel não encontrado em ${this.excelPath}. Verifique o caminho no arquivo .env (PATH_EXCEL) ou certifique-se de que o arquivo está no repositório.`;
+      const errorMsg = `Arquivo Excel não encontrado em ${this.excelPath}. Verifique o caminho no arquivo .env (PATH_EXCEL)`;
       this.logger.error(errorMsg);
       throw new Error(errorMsg);
     }

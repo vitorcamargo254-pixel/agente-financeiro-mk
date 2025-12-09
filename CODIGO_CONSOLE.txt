@@ -1,3 +1,13 @@
+// Código para testar upload pelo console
+// Copie e cole TUDO no console do navegador (F12)
+
+// Detecta API_BASE automaticamente
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:4000'
+  : 'https://agente-financeiro-mk-backend.onrender.com';
+
+console.log('🌐 API_BASE:', API_BASE);
+
 // Cria um input de arquivo
 const input = document.createElement('input');
 input.type = 'file';
@@ -14,28 +24,53 @@ input.addEventListener('change', async (e) => {
   formData.append('file', file);
   
   console.log('📤 Enviando arquivo:', file.name);
+  console.log('📡 Para:', `${API_BASE}/finance/upload`);
   
   try {
-    const res = await fetch('https://agente-financeiro-mk-backend.onrender.com/finance/upload', {
+    const res = await fetch(`${API_BASE}/finance/upload`, {
       method: 'POST',
       body: formData,
     });
     
     const data = await res.json();
-    console.log('📥 Resposta:', data);
+    console.log('📥 Resposta completa:', data);
     
     if (data.success) {
-      alert(`✅ Sucesso! ${data.imported} transações importadas.`);
-      location.reload(); // Recarrega a página
+      console.log(`✅ Sucesso! ${data.imported} transações importadas.`);
+      
+      // Aguarda 1 segundo para garantir que o backend processou
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Tenta atualizar os dados se as funções existirem
+      if (typeof loadTransactions === 'function') {
+        console.log('🔄 Carregando transações...');
+        await loadTransactions();
+      }
+      if (typeof loadSummary === 'function') {
+        console.log('🔄 Carregando resumo...');
+        await loadSummary();
+      }
+      if (typeof updateAll === 'function') {
+        console.log('🔄 Atualizando interface...');
+        updateAll();
+      }
+      
+      alert(`✅ Sucesso! ${data.imported} transações importadas.\n\nA página vai recarregar em 2 segundos...`);
+      
+      // Recarrega a página após 2 segundos
+      setTimeout(() => {
+        console.log('🔄 Recarregando página...');
+        location.reload();
+      }, 2000);
     } else {
       alert(`❌ Erro: ${data.message || data.error}`);
     }
   } catch (err) {
-    console.error('Erro:', err);
+    console.error('❌ Erro completo:', err);
     alert(`❌ Erro: ${err.message}`);
   }
 });
 
 // Abre o seletor de arquivo
+console.log('📁 Abrindo seletor de arquivo...');
 input.click();
-

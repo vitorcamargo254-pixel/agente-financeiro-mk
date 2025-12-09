@@ -102,23 +102,18 @@ export class RemindersService {
     let emailsSent = 0;
     let callsMade = 0;
     const errors: string[] = [];
-    let processed = 0;
 
-    // Processa cada transação com timeout individual
     for (const item of upcoming) {
       const { transaction, diasRestantes } = item;
-      try {
       const valorFormatado = Math.abs(Number(transaction.valor)).toLocaleString('pt-BR', {
         style: 'currency',
         currency: 'BRL',
       });
 
-      // Envia e-mail se configurado (com timeout para não travar)
+      // Envia e-mail se configurado
       if (config.enviarEmail && config.emailDestino) {
-        this.logger.log(`📧 Tentando enviar e-mail para ${config.emailDestino} - Transação: ${transaction.descricao}`);
         try {
-          // Timeout de 15 segundos para envio de e-mail (aumentado para dar tempo de conexão SMTP)
-          const emailPromise = this.emailService.sendPaymentReminder(
+          const result = await this.emailService.sendPaymentReminder(
             config.emailDestino,
             {
               descricao: transaction.descricao,
@@ -128,15 +123,8 @@ export class RemindersService {
             },
           );
 
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout: Envio de e-mail demorou mais de 15 segundos')), 15000)
-          );
-
-          const result = await Promise.race([emailPromise, timeoutPromise]) as any;
-
           if (result.success) {
             emailsSent++;
-            this.logger.log(`✅ E-mail enviado para ${config.emailDestino} - ${transaction.descricao}`);
             await this.prisma.reminderLog.create({
               data: {
                 transactionId: transaction.id,
@@ -146,9 +134,7 @@ export class RemindersService {
               },
             });
           } else {
-            const errorMsg = `Erro ao enviar e-mail: ${result.error}`;
-            errors.push(errorMsg);
-            this.logger.warn(`⚠️ ${errorMsg}`);
+            errors.push(`Erro ao enviar e-mail: ${result.error}`);
             await this.prisma.reminderLog.create({
               data: {
                 transactionId: transaction.id,
@@ -158,23 +144,8 @@ export class RemindersService {
               },
             });
           }
-        } catch (error: any) {
-          const errorMsg = `Erro ao enviar e-mail: ${error.message}`;
-          errors.push(errorMsg);
-          this.logger.error(`❌ ${errorMsg}`);
-          // Cria log mesmo em caso de erro
-          try {
-            await this.prisma.reminderLog.create({
-              data: {
-                transactionId: transaction.id,
-                tipo: 'EMAIL',
-                status: 'FAILED',
-                erro: error.message,
-              },
-            });
-          } catch (logError) {
-            // Ignora erro ao criar log
-          }
+        } catch (error) {
+          errors.push(`Erro ao enviar e-mail: ${error.message}`);
         }
       }
 
@@ -232,24 +203,14 @@ export class RemindersService {
           );
         }
       }
-      
-      // Incrementa contador de processadas
-      processed++;
-      } catch (itemError: any) {
-        // Se der erro ao processar uma transação, loga mas continua
-        const errorMsg = `Erro ao processar transação ${transaction.id}: ${itemError.message}`;
-        errors.push(errorMsg);
-        this.logger.error(`❌ ${errorMsg}`);
-        processed++; // Conta como processada mesmo com erro
-      }
     }
 
     this.logger.log(
-      `✅ Processamento concluído: ${processed}/${upcoming.length} transações processadas, ${emailsSent} e-mails, ${callsMade} ligações`,
+      `✅ Processamento concluído: ${upcoming.length} transações, ${emailsSent} e-mails, ${callsMade} ligações`,
     );
 
     return {
-      processed,
+      processed: upcoming.length,
       emailsSent,
       callsMade,
       errors,

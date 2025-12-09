@@ -89,7 +89,7 @@
             <label for="file-upload" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition flex items-center gap-2">
               <i class="fa-solid fa-upload"></i> Enviar Planilha
             </label>
-            <input type="file" id="file-upload" accept=".xlsx,.xls,.xlsm" class="hidden" />
+            <input type="file" id="file-upload" accept=".xlsx,.xls" class="hidden" />
             <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados do servidor"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
           </div>
         </div>
@@ -829,8 +829,8 @@
       
       // Valida extensão
       const fileName = file.name.toLowerCase();
-      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.xlsm')) {
-        alert('❌ Por favor, selecione um arquivo Excel (.xlsx, .xls ou .xlsm)');
+      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        alert('❌ Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
         return;
       }
       

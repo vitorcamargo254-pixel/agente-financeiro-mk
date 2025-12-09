@@ -15,12 +15,6 @@ export class EmailService {
     const emailFrom = this.config.get<string>('EMAIL_FROM') || emailUser;
 
     if (emailHost && emailUser && emailPass) {
-      this.logger.log(`📧 Configurando transporte de e-mail...`);
-      this.logger.log(`   Host: ${emailHost}`);
-      this.logger.log(`   Port: ${emailPort}`);
-      this.logger.log(`   User: ${emailUser}`);
-      this.logger.log(`   Password: ${emailPass ? '***' : 'não configurado'}`);
-      
       this.transporter = nodemailer.createTransport({
         host: emailHost,
         port: emailPort,
@@ -29,58 +23,11 @@ export class EmailService {
           user: emailUser,
           pass: emailPass,
         },
-        // Timeouts aumentados para evitar problemas de conexão
-        connectionTimeout: 20000, // 20 segundos para conectar
-        greetingTimeout: 20000, // 20 segundos para greeting
-        socketTimeout: 20000, // 20 segundos para operações de socket
-        // Tenta usar TLS se disponível
-        requireTLS: emailPort === 587, // Requer TLS na porta 587
-        tls: {
-          rejectUnauthorized: false, // Aceita certificados auto-assinados
-          ciphers: 'SSLv3', // Tenta diferentes ciphers
-        },
-        // Pool de conexões para melhor performance
-        pool: true,
-        maxConnections: 1,
-        maxMessages: 3,
       });
 
       this.logger.log('✅ Serviço de e-mail inicializado');
-      
-      // Verifica conexão de forma assíncrona (não bloqueia inicialização)
-      this.verifyConnection().catch(() => {
-        // Erro já foi logado no método verifyConnection
-      });
     } else {
       this.logger.warn('⚠️ E-mail não configurado. Configure EMAIL_HOST, EMAIL_USER e EMAIL_PASSWORD no .env');
-      this.logger.warn(`   EMAIL_HOST: ${emailHost || 'não configurado'}`);
-      this.logger.warn(`   EMAIL_USER: ${emailUser || 'não configurado'}`);
-      this.logger.warn(`   EMAIL_PASSWORD: ${emailPass ? 'configurado' : 'não configurado'}`);
-    }
-  }
-
-  /**
-   * Verifica a conexão SMTP de forma assíncrona
-   * Nota: Alguns provedores (como Render) podem bloquear conexões SMTP de saída
-   * A verificação pode falhar, mas o envio pode funcionar na hora de usar
-   */
-  private async verifyConnection(): Promise<void> {
-    if (!this.transporter) return;
-    
-    try {
-      // Timeout curto para verificação (não bloqueia inicialização)
-      const verifyPromise = this.transporter.verify();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout na verificação')), 5000)
-      );
-      
-      await Promise.race([verifyPromise, timeoutPromise]);
-      this.logger.log('✅ Conexão SMTP verificada com sucesso!');
-    } catch (verifyError: any) {
-      this.logger.warn(`⚠️ Verificação SMTP falhou: ${verifyError.message}`);
-      this.logger.warn('⚠️ Isso é normal em alguns ambientes (ex: Render pode bloquear SMTP de saída)');
-      this.logger.warn('⚠️ O envio será tentado mesmo assim quando necessário');
-      // Continua mesmo assim - pode funcionar na hora de enviar
     }
   }
 
@@ -91,15 +38,6 @@ export class EmailService {
     text?: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.transporter) {
-      const emailHost = this.config.get<string>('EMAIL_HOST');
-      const emailUser = this.config.get<string>('EMAIL_USER');
-      const emailPass = this.config.get<string>('EMAIL_PASSWORD');
-      
-      this.logger.error('❌ TRANSPORTER NÃO ESTÁ CONFIGURADO!');
-      this.logger.error(`   EMAIL_HOST: ${emailHost ? '✅ configurado' : '❌ não configurado'}`);
-      this.logger.error(`   EMAIL_USER: ${emailUser ? '✅ configurado' : '❌ não configurado'}`);
-      this.logger.error(`   EMAIL_PASSWORD: ${emailPass ? '✅ configurado' : '❌ não configurado'}`);
-      
       return {
         success: false,
         error: 'Serviço de e-mail não configurado. Configure as variáveis de ambiente.',
@@ -108,9 +46,6 @@ export class EmailService {
 
     try {
       const emailFrom = this.config.get<string>('EMAIL_FROM') || this.config.get<string>('EMAIL_USER');
-      
-      this.logger.log(`📧 Enviando e-mail de ${emailFrom} para ${to}...`);
-      this.logger.log(`📧 Assunto: ${subject}`);
 
       const info = await this.transporter.sendMail({
         from: emailFrom,
@@ -125,13 +60,11 @@ export class EmailService {
         success: true,
         messageId: info.messageId,
       };
-    } catch (error: any) {
-      const errorMessage = error.message || 'Erro desconhecido ao enviar e-mail';
-      this.logger.error(`❌ Erro ao enviar e-mail para ${to}: ${errorMessage}`);
-      this.logger.error(`❌ Detalhes do erro:`, error);
+    } catch (error) {
+      this.logger.error(`❌ Erro ao enviar e-mail: ${error.message}`, error);
       return {
         success: false,
-        error: errorMessage,
+        error: error.message,
       };
     }
   }

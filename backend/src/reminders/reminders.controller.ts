@@ -22,26 +22,7 @@ export class RemindersController {
 
   @Post('process')
   async processReminders() {
-    // Timeout geral de 60 segundos para todo o processamento
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Timeout: Processamento demorou mais de 60 segundos')), 60000);
-    });
-
-    try {
-      const result = await Promise.race([
-        this.remindersService.processReminders(),
-        timeoutPromise,
-      ]);
-      return result;
-    } catch (error: any) {
-      // Sempre retorna uma resposta, mesmo em caso de erro
-      return {
-        processed: 0,
-        emailsSent: 0,
-        callsMade: 0,
-        errors: [error.message || 'Erro desconhecido no processamento'],
-      };
-    }
+    return await this.remindersService.processReminders();
   }
 
   @Get('logs')

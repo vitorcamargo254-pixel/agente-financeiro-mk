@@ -1,0 +1,94 @@
+// Código MELHORADO para testar upload pelo console
+// Copie e cole TUDO no console do navegador (F12)
+
+// Detecta API_BASE automaticamente
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:4000'
+  : 'https://agente-financeiro-mk-backend.onrender.com';
+
+console.log('🌐 API_BASE:', API_BASE);
+
+// Função para verificar se os dados foram salvos
+async function verificarDados() {
+  try {
+    console.log('🔍 Verificando se os dados foram salvos...');
+    const res = await fetch(`${API_BASE}/finance/transactions?page=1&limit=5`);
+    const data = await res.json();
+    console.log('📊 Dados no banco:', data);
+    if (data.items && data.items.length > 0) {
+      console.log(`✅ CONFIRMADO: ${data.items.length} transações no banco!`);
+      return true;
+    } else {
+      console.log('⚠️ Nenhuma transação encontrada no banco ainda...');
+      return false;
+    }
+  } catch (err) {
+    console.error('❌ Erro ao verificar dados:', err);
+    return false;
+  }
+}
+
+// Cria um input de arquivo
+const input = document.createElement('input');
+input.type = 'file';
+input.accept = '.xlsx,.xls,.xlsm';
+input.style.display = 'none';
+document.body.appendChild(input);
+
+// Quando selecionar arquivo
+input.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  console.log('📤 Enviando arquivo:', file.name);
+  console.log('📡 Para:', `${API_BASE}/finance/upload`);
+  
+  try {
+    const res = await fetch(`${API_BASE}/finance/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const data = await res.json();
+    console.log('📥 Resposta completa:', data);
+    
+    if (data.success) {
+      console.log(`✅ Upload concluído! ${data.imported} transações importadas.`);
+      
+      // Aguarda 2 segundos para garantir que o backend salvou
+      console.log('⏳ Aguardando 2 segundos para backend processar...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Verifica se os dados foram salvos
+      const dadosSalvos = await verificarDados();
+      
+      if (dadosSalvos) {
+        console.log('✅ Dados confirmados no banco!');
+        alert(`✅ Sucesso! ${data.imported} transações importadas e confirmadas no banco!\n\nA página vai recarregar agora...`);
+      } else {
+        console.log('⚠️ Dados ainda não aparecem no banco, mas vamos recarregar mesmo assim...');
+        alert(`✅ Upload concluído! ${data.imported} transações importadas.\n\nA página vai recarregar para verificar...`);
+      }
+      
+      // SEMPRE recarrega a página após 1 segundo
+      setTimeout(() => {
+        console.log('🔄 Recarregando página...');
+        location.reload(true); // true = força recarregar do servidor (ignora cache)
+      }, 1000);
+      
+    } else {
+      alert(`❌ Erro: ${data.message || data.error}`);
+    }
+  } catch (err) {
+    console.error('❌ Erro completo:', err);
+    alert(`❌ Erro: ${err.message}`);
+  }
+});
+
+// Abre o seletor de arquivo
+console.log('📁 Abrindo seletor de arquivo...');
+input.click();
+

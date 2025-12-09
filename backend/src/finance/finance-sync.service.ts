@@ -32,42 +32,6 @@ export class FinanceSyncService {
     return { imported };
   }
 
-  async syncFromUploadedFile(file: { buffer: any; originalname: string }): Promise<{ imported: number }> {
-    this.logger.log(`📤 Processando arquivo enviado: ${file.originalname}`);
-
-    // Converte o buffer para Buffer do Node.js se necessário
-    let bufferData: Buffer;
-    if (Buffer.isBuffer(file.buffer)) {
-      bufferData = file.buffer;
-    } else if (file.buffer instanceof ArrayBuffer) {
-      bufferData = Buffer.from(file.buffer);
-    } else if (file.buffer?.data) {
-      // Multer pode retornar buffer.data
-      bufferData = Buffer.isBuffer(file.buffer.data) ? file.buffer.data : Buffer.from(file.buffer.data);
-    } else {
-      bufferData = Buffer.from(file.buffer);
-    }
-
-    // Passo 1: Converter Excel do buffer para JSON (em memória)
-    const transactions = await this.convertExcelBufferToJson(bufferData);
-
-    // Passo 2: Importar para banco
-    const imported = await this.importJsonToDb(transactions);
-
-    this.logger.log(`✅ Sincronização concluída: ${imported} transações importadas do arquivo ${file.originalname}`);
-    return { imported };
-  }
-
-  private async convertExcelBufferToJson(buffer: Buffer): Promise<any[]> {
-    this.logger.log('📊 Convertendo Excel (buffer) para JSON...');
-
-    const workbook = new ExcelJS.Workbook();
-    // Cast explícito para resolver incompatibilidade de tipos do TypeScript
-    await workbook.xlsx.load(buffer as any);
-
-    return this.processWorkbook(workbook);
-  }
-
   private async convertExcelToJson() {
     this.logger.log('📊 Convertendo Excel para JSON...');
 
@@ -77,11 +41,6 @@ export class FinanceSyncService {
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(this.excelPath);
-
-    return this.processWorkbook(workbook);
-  }
-
-  private async processWorkbook(workbook: ExcelJS.Workbook) {
 
     const sheet = workbook.getWorksheet('Dados') || workbook.worksheets[0];
     this.logger.log(`Usando planilha: ${sheet.name}`);

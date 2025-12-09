@@ -476,35 +476,10 @@ export class FinanceService {
     try {
       this.logger.log('Iniciando importação do Excel...');
       
-      // Verifica se a tabela existe antes de limpar
-      try {
-        // Tenta executar migrations se necessário
-        const { execSync } = require('child_process');
-        try {
-          execSync('npx prisma migrate deploy', { stdio: 'pipe' });
-          this.logger.log('✅ Migrations verificadas');
-        } catch (migrationError) {
-          this.logger.warn('⚠️ Aviso ao executar migrations:', migrationError);
-        }
-        
-        // Verifica se consegue acessar a tabela
-        await this.prisma.$queryRaw`SELECT 1 FROM Transaction LIMIT 1`;
-        
-        // Limpa o banco antes de importar
-        this.logger.log('Limpando banco de dados...');
-        const deleted = await this.prisma.transaction.deleteMany({});
-        this.logger.log(`Removidas ${deleted.count} transações antigas`);
-      } catch (error: any) {
-        // Se a tabela não existe, cria ela primeiro
-        if (error.message?.includes('does not exist') || error.code === 'P2021') {
-          this.logger.warn('⚠️ Tabela não existe, tentando criar...');
-          const { execSync } = require('child_process');
-          execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-          this.logger.log('✅ Tabela criada, continuando...');
-        } else {
-          throw error; // Re-lança outros erros
-        }
-      }
+      // Limpa o banco antes de importar
+      this.logger.log('Limpando banco de dados...');
+      const deleted = await this.prisma.transaction.deleteMany({});
+      this.logger.log(`Removidas ${deleted.count} transações antigas`);
       
       const transactions = await this.excelService.readTransactions();
       
