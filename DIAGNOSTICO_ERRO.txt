@@ -1,0 +1,69 @@
+🔍 DIAGNÓSTICO DE ERRO - Agente Financeiro
+========================================
+
+Para identificar o problema, preciso saber:
+
+1. QUAL ERRO APARECE?
+   □ Mensagem de alerta (qual?)
+   □ Erro no console do navegador (F12)
+   □ Página não carrega
+   □ Outro: _______________
+
+2. QUANDO ACONTECE?
+   □ Ao abrir a página
+   □ Ao clicar em "Sincronizar"
+   □ Ao fazer upload da planilha
+   □ Ao tentar usar o Assistente Inteligente
+   □ Outro: _______________
+
+3. O QUE APARECE NO CONSOLE (F12)?
+   - Abra o console (F12 → aba Console)
+   - Procure por mensagens em VERMELHO
+   - Copie e cole aqui: _______________
+
+4. TESTE ESTAS URLS NO NAVEGADOR:
+   □ https://agente-financeiro-mk-backend.onrender.com/health
+   □ https://agente-financeiro-mk-backend.onrender.com/finance/transactions
+   
+   O que aparece? _______________
+
+5. QUAL É O LINK DO FRONTEND QUE VOCÊ ESTÁ USANDO?
+   _______________
+
+═══════════════════════════════════════════════════════
+
+CÓDIGO PARA TESTAR NO CONSOLE (F12):
+====================================
+
+Cole este código no console do navegador para testar:
+
+```javascript
+// Teste de conexão com backend
+const API_BASE = 'https://agente-financeiro-mk-backend.onrender.com';
+
+console.log('🔍 Testando conexão com backend...');
+console.log('🌐 API_BASE:', API_BASE);
+
+// Testa /health
+fetch(`${API_BASE}/health`)
+  .then(r => r.json())
+  .then(data => {
+    console.log('✅ /health funcionou:', data);
+  })
+  .catch(err => {
+    console.error('❌ Erro em /health:', err);
+  });
+
+// Testa /finance/transactions
+fetch(`${API_BASE}/finance/transactions?page=1&limit=10`)
+  .then(r => r.json())
+  .then(data => {
+    console.log('✅ /finance/transactions funcionou:', data);
+  })
+  .catch(err => {
+    console.error('❌ Erro em /finance/transactions:', err);
+  });
+```
+
+Cole este código no console e me diga o que aparece!
+
