@@ -1,7 +1,7 @@
 ﻿import 'dotenv/config';
 import { FinanceService } from '../finance.service';
 import { ExcelService } from '../excel/excel.service';
-import { PrismaService } from '../common/prisma.service';
+import { PrismaService } from '../../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
 async function run() {
@@ -32,3 +32,4 @@ run().catch((err) => {
   console.error('Erro ao importar Excel:', err);
   process.exit(1);
 });
+
