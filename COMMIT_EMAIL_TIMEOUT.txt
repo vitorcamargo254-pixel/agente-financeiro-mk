@@ -1,0 +1,14 @@
+Fix: Corrigir timeout de e-mail e melhorar configuração SMTP
+
+- Corrige erro de compilação movendo await do construtor para método separado (verifyConnection)
+- Aumenta timeout de envio de e-mail de 5s para 15s para dar mais tempo à conexão SMTP
+- Adiciona timeouts de conexão SMTP (connectionTimeout: 10s, greetingTimeout: 10s, socketTimeout: 10s)
+- Melhora configuração TLS para servidores SMTP (rejectUnauthorized: false)
+- Adiciona logs detalhados para diagnóstico de problemas de e-mail
+- Melhora tratamento de erros com mensagens mais informativas
+
+Arquivos modificados:
+- backend/src/reminders/email.service.ts
+- backend/src/reminders/reminders.service.ts
+
+

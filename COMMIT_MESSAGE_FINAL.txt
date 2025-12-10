@@ -1,0 +1,13 @@
+Fix: Adicionar timeout e tratamento de erros no processamento de lembretes
+
+- Adiciona timeout geral de 60s no controller para garantir que sempre retorna resposta
+- Reduz timeout de e-mail para 5s para evitar travamento no envio
+- Adiciona try-catch em cada transação para continuar processando mesmo se uma falhar
+- Melhora logs e tratamento de erros para facilitar diagnóstico
+- Garante que sempre retorna resposta mesmo em caso de erro ou timeout
+
+Arquivos modificados:
+- backend/src/reminders/reminders.controller.ts
+- backend/src/reminders/reminders.service.ts
+
+
