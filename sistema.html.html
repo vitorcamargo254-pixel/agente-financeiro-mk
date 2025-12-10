@@ -805,7 +805,7 @@
     // Upload de planilha Excel
     const fileUpload = document.getElementById('file-upload');
     fileUpload.addEventListener('change', async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = e.target.files?.[0];
       if (!file) return;
       
       // Valida extensão
@@ -818,7 +818,7 @@
       const formData = new FormData();
       formData.append('file', file);
       
-      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
+      const btnUpload = fileUpload.previousElementSibling;
       const originalText = btnUpload.innerHTML;
       
       try {
@@ -845,7 +845,7 @@
         updateAll();
         
         // Limpa o input
-        (e.target as HTMLInputElement).value = '';
+        e.target.value = '';
       } catch (err) {
         console.error('[Upload] Erro:', err);
         alert(`❌ Erro ao enviar planilha:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
