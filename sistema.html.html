@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agente Financeiro • Microkids</title>
+  <!-- Vers�o atualizada: 2025-12-10 13:39:32 -->
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -474,12 +475,25 @@
   // Função para buscar transações do backend
   async function loadTransactions() {
     try {
-      const res = await fetch(`${API_BASE}/finance/transactions?page=1&limit=5000`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      console.log(`📡 Tentando conectar com: ${API_BASE}/finance/transactions`);
+      const res = await fetch(`${API_BASE}/finance/transactions?page=1&limit=5000`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => 'Erro desconhecido');
+        console.error(`❌ Erro HTTP ${res.status}:`, errorText);
+        throw new Error(`HTTP ${res.status}: ${errorText.substring(0, 100)}`);
+      }
+      
       const data = await res.json();
+      console.log(`✅ Recebidas ${data.items?.length || 0} transações`);
 
       // Converter formato do backend para o formato esperado pelo frontend
-      financialData = data.items.map(item => ({
+      financialData = (data.items || []).map(item => ({
         id: item.id,
         date: item.data ? new Date(item.data).toISOString().split('T')[0] : null,
         description: item.descricao || '',
@@ -502,10 +516,11 @@
         updateDashboardCards();
       }
     } catch (err) {
-      console.error('[loadTransactions] Erro:', err);
+      console.error('[loadTransactions] Erro completo:', err);
       financialData = [];
       filteredData = [];
       updateAll();
+      throw err; // Re-lança o erro para ser capturado pelo syncFromBackend
     }
   }
 
@@ -513,7 +528,10 @@
   async function loadSummary() {
     try {
       const res = await fetch(`${API_BASE}/finance/summary`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => 'Erro desconhecido');
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+      }
       const data = await res.json();
 
       document.getElementById('total-receitas').textContent = BRL.format(Number(data.receitas) || 0);
@@ -521,6 +539,11 @@
       document.getElementById('saldo-liquido').textContent = BRL.format(Number(data.saldo) || 0);
     } catch (err) {
       console.error('[loadSummary] Erro:', err);
+      // Se der erro, mantém os valores padrão
+      document.getElementById('total-receitas').textContent = BRL.format(0);
+      document.getElementById('total-despesas').textContent = BRL.format(0);
+      document.getElementById('saldo-liquido').textContent = BRL.format(0);
+      throw err; // Re-lança o erro para ser capturado pelo syncFromBackend
     }
   }
 
@@ -536,9 +559,27 @@
     
     try {
       console.log('🔄 Atualizando dados do banco...');
+      console.log(`🌐 API_BASE: ${API_BASE}`);
+      
       // Desabilita o botão e mostra loading
       btnSync.disabled = true;
       btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';
+      
+      // Testa conexão com backend primeiro
+      try {
+        const healthCheck = await fetch(`${API_BASE}/health`, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
+        });
+        if (healthCheck.ok) {
+          console.log('✅ Backend está online!');
+        } else {
+          console.warn('⚠️ Backend respondeu com erro:', healthCheck.status);
+        }
+      } catch (healthErr) {
+        console.warn('⚠️ Backend pode estar inativo (free tier):', healthErr.message);
+        // Continua mesmo assim, pode ser que o backend esteja "spinning up"
+      }
       
       // Apenas recarrega os dados do banco (não tenta ler Excel local)
       await loadTransactions();
@@ -546,15 +587,46 @@
       updateAll();
       
       console.log('✅ Dados atualizados com sucesso!');
-      // Não mostra alert, apenas atualiza silenciosamente
+      
+      // Mostra mensagem de sucesso discreta
+      btnSync.innerHTML = '<i class="fa-solid fa-check"></i> Atualizado!';
+      setTimeout(() => {
+        btnSync.innerHTML = originalText;
+      }, 2000);
+      
     } catch (err) {
       console.error('[syncFromBackend] Erro completo:', err);
       const errorMsg = err.message || 'Erro desconhecido';
-      alert(`❌ Erro ao atualizar dados:\n\n${errorMsg}\n\nAbra o console (F12) para mais detalhes`);
+      
+      // Mensagem mais amigável
+      let userMessage = '❌ Erro ao atualizar dados:\n\n';
+      
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+        userMessage += 'Não foi possível conectar com o servidor.\n\n';
+        userMessage += 'Possíveis causas:\n';
+        userMessage += '• Backend está inativo (free tier do Render)\n';
+        userMessage += '• Aguarde 30-60 segundos e tente novamente\n';
+        userMessage += '• Verifique se o backend está online\n\n';
+      } else if (errorMsg.includes('HTTP 500')) {
+        userMessage += 'Erro no servidor (500).\n\n';
+        userMessage += 'O backend pode estar com problemas.\n';
+        userMessage += 'Verifique os logs do backend no Render.\n\n';
+      } else if (errorMsg.includes('HTTP 404')) {
+        userMessage += 'Endpoint não encontrado (404).\n\n';
+        userMessage += 'Verifique se o backend está atualizado.\n\n';
+      } else {
+        userMessage += errorMsg + '\n\n';
+      }
+      
+      userMessage += 'Abra o console (F12) para mais detalhes.';
+      
+      alert(userMessage);
     } finally {
       // Reabilita o botão
       btnSync.disabled = false;
-      btnSync.innerHTML = originalText;
+      if (!btnSync.innerHTML.includes('Atualizado!')) {
+        btnSync.innerHTML = originalText;
+      }
     }
   }
 
@@ -805,7 +877,7 @@
     // Upload de planilha Excel
     const fileUpload = document.getElementById('file-upload');
     fileUpload.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       
       // Valida extensão
@@ -818,7 +890,7 @@
       const formData = new FormData();
       formData.append('file', file);
       
-      const btnUpload = fileUpload.previousElementSibling;
+      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
       const originalText = btnUpload.innerHTML;
       
       try {
@@ -845,7 +917,7 @@
         updateAll();
         
         // Limpa o input
-        e.target.value = '';
+        (e.target as HTMLInputElement).value = '';
       } catch (err) {
         console.error('[Upload] Erro:', err);
         alert(`❌ Erro ao enviar planilha:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
