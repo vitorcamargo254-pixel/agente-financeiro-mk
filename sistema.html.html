@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agente Financeiro • Microkids</title>
-  <!-- Vers�o atualizada: 2025-12-10 13:39:32 -->
+  <!-- Versão corrigida: 2025-01-08 - syncFromBackend revertido para comportamento original -->
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -90,7 +90,7 @@
             <label for="file-upload" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition flex items-center gap-2">
               <i class="fa-solid fa-upload"></i> Enviar Planilha
             </label>
-            <input type="file" id="file-upload" accept=".xlsx,.xls" class="hidden" />
+            <input type="file" id="file-upload" accept=".xlsx,.xls,.xlsm" class="hidden" />
             <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados do servidor"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
           </div>
         </div>
@@ -558,75 +558,46 @@
     const originalText = btnSync.innerHTML;
     
     try {
-      console.log('🔄 Atualizando dados do banco...');
-      console.log(`🌐 API_BASE: ${API_BASE}`);
-      
+      console.log('🔄 Iniciando sincronização...');
       // Desabilita o botão e mostra loading
       btnSync.disabled = true;
-      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';
+      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...';
       
-      // Testa conexão com backend primeiro
-      try {
-        const healthCheck = await fetch(`${API_BASE}/health`, { 
-          method: 'GET',
-          signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
-        });
-        if (healthCheck.ok) {
-          console.log('✅ Backend está online!');
-        } else {
-          console.warn('⚠️ Backend respondeu com erro:', healthCheck.status);
-        }
-      } catch (healthErr) {
-        console.warn('⚠️ Backend pode estar inativo (free tier):', healthErr.message);
-        // Continua mesmo assim, pode ser que o backend esteja "spinning up"
+      console.log(`📡 Chamando: ${API_BASE}/finance/sync`);
+      const res = await fetch(`${API_BASE}/finance/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log(`📥 Resposta recebida: status ${res.status}`);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
       }
       
-      // Apenas recarrega os dados do banco (não tenta ler Excel local)
-      await loadTransactions();
-      await loadSummary();
-      updateAll();
+      const data = await res.json();
+      console.log('📊 Dados recebidos:', data);
       
-      console.log('✅ Dados atualizados com sucesso!');
-      
-      // Mostra mensagem de sucesso discreta
-      btnSync.innerHTML = '<i class="fa-solid fa-check"></i> Atualizado!';
-      setTimeout(() => {
-        btnSync.innerHTML = originalText;
-      }, 2000);
-      
+      if (data.success) {
+        alert(`✅ Sincronização concluída!\n\n${data.imported} transações importadas.`);
+        // Recarrega os dados
+        await loadTransactions();
+        await loadSummary();
+        updateAll();
+      } else {
+        alert(`❌ Erro na sincronização:\n\n${data.message || data.error || 'Erro desconhecido'}`);
+      }
     } catch (err) {
       console.error('[syncFromBackend] Erro completo:', err);
       const errorMsg = err.message || 'Erro desconhecido';
-      
-      // Mensagem mais amigável
-      let userMessage = '❌ Erro ao atualizar dados:\n\n';
-      
-      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        userMessage += 'Não foi possível conectar com o servidor.\n\n';
-        userMessage += 'Possíveis causas:\n';
-        userMessage += '• Backend está inativo (free tier do Render)\n';
-        userMessage += '• Aguarde 30-60 segundos e tente novamente\n';
-        userMessage += '• Verifique se o backend está online\n\n';
-      } else if (errorMsg.includes('HTTP 500')) {
-        userMessage += 'Erro no servidor (500).\n\n';
-        userMessage += 'O backend pode estar com problemas.\n';
-        userMessage += 'Verifique os logs do backend no Render.\n\n';
-      } else if (errorMsg.includes('HTTP 404')) {
-        userMessage += 'Endpoint não encontrado (404).\n\n';
-        userMessage += 'Verifique se o backend está atualizado.\n\n';
-      } else {
-        userMessage += errorMsg + '\n\n';
-      }
-      
-      userMessage += 'Abra o console (F12) para mais detalhes.';
-      
-      alert(userMessage);
+      alert(`❌ Erro ao sincronizar:\n\n${errorMsg}\n\nVerifique:\n1. Se o servidor está rodando na porta 4000\n2. Se o arquivo Excel está no caminho correto\n3. Abra o console (F12) para mais detalhes`);
     } finally {
       // Reabilita o botão
       btnSync.disabled = false;
-      if (!btnSync.innerHTML.includes('Atualizado!')) {
-        btnSync.innerHTML = originalText;
-      }
+      btnSync.innerHTML = originalText;
     }
   }
 
@@ -877,20 +848,20 @@
     // Upload de planilha Excel
     const fileUpload = document.getElementById('file-upload');
     fileUpload.addEventListener('change', async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = e.target.files?.[0];
       if (!file) return;
       
       // Valida extensão
       const fileName = file.name.toLowerCase();
-      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-        alert('❌ Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
+      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.xlsm')) {
+        alert('❌ Por favor, selecione um arquivo Excel (.xlsx, .xls ou .xlsm)');
         return;
       }
       
       const formData = new FormData();
       formData.append('file', file);
       
-      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
+      const btnUpload = fileUpload.previousElementSibling;
       const originalText = btnUpload.innerHTML;
       
       try {
@@ -917,7 +888,7 @@
         updateAll();
         
         // Limpa o input
-        (e.target as HTMLInputElement).value = '';
+        e.target.value = '';
       } catch (err) {
         console.error('[Upload] Erro:', err);
         alert(`❌ Erro ao enviar planilha:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
