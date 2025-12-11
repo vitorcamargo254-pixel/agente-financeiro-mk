@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agente Financeiro • Microkids</title>
-  <!-- Vers�o atualizada: 2025-12-10 13:39:32 -->
+  <!-- Versão corrigida: 2025-01-08 - API_BASE corrigido e syncFromBackend revertido -->
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -90,7 +90,7 @@
             <label for="file-upload" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition flex items-center gap-2">
               <i class="fa-solid fa-upload"></i> Enviar Planilha
             </label>
-            <input type="file" id="file-upload" accept=".xlsx,.xls" class="hidden" />
+            <input type="file" id="file-upload" accept=".xlsx,.xls,.xlsm" class="hidden" />
             <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados do servidor"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
           </div>
         </div>
@@ -877,20 +877,20 @@
     // Upload de planilha Excel
     const fileUpload = document.getElementById('file-upload');
     fileUpload.addEventListener('change', async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = e.target.files?.[0];
       if (!file) return;
       
       // Valida extensão
       const fileName = file.name.toLowerCase();
-      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-        alert('❌ Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
+      if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.xlsm')) {
+        alert('❌ Por favor, selecione um arquivo Excel (.xlsx, .xls ou .xlsm)');
         return;
       }
       
       const formData = new FormData();
       formData.append('file', file);
       
-      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
+      const btnUpload = fileUpload.previousElementSibling;
       const originalText = btnUpload.innerHTML;
       
       try {
@@ -917,7 +917,7 @@
         updateAll();
         
         // Limpa o input
-        (e.target as HTMLInputElement).value = '';
+        e.target.value = '';
       } catch (err) {
         console.error('[Upload] Erro:', err);
         alert(`❌ Erro ao enviar planilha:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
