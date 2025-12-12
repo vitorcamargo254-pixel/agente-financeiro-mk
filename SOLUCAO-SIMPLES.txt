@@ -1,0 +1,46 @@
+═══════════════════════════════════════════════════════════════
+  SOLUÇÃO SIMPLES - Siga EXATAMENTE estes 3 passos
+═══════════════════════════════════════════════════════════════
+
+PASSO 1: ABRIR GITHUB DESKTOP
+─────────────────────────────
+1. Abra o GitHub Desktop
+2. Se aparecer "index.html" e "sistema.html.html" como modificados:
+   → Escreva: "Atualiza botão upload"
+   → Clique em "Commit to main"
+   → Clique em "Push origin"
+   → PRONTO! Vá para o PASSO 2
+
+3. Se NÃO aparecer nada:
+   → Feche o GitHub Desktop
+   → Abra novamente
+   → Se ainda não aparecer, vá direto para o PASSO 2
+
+PASSO 2: DEPLOY MANUAL NO RENDER (MAIS IMPORTANTE!)
+─────────────────────────────────────────────────────
+1. Abra: https://dashboard.render.com
+2. Faça login
+3. Clique no serviço "agente-financeiro-mk-1"
+4. Procure o botão "Manual Deploy" (canto superior direito)
+5. Clique em "Manual Deploy"
+6. Clique em "Deploy latest commit"
+7. AGUARDE 3-5 MINUTOS até aparecer "Deploy succeeded"
+
+PASSO 3: LIMPAR CACHE
+──────────────────────
+1. Abra: https://agente-financeiro-mk-1.onrender.com
+2. Pressione: Ctrl + Shift + Delete
+3. Marque: "Imagens e arquivos em cache"
+4. Clique: "Limpar dados"
+5. Feche e abra o navegador novamente
+6. OU simplesmente pressione: Ctrl + F5
+
+═══════════════════════════════════════════════════════════════
+  PRONTO! O botão deve aparecer agora.
+═══════════════════════════════════════════════════════════════
+
+Se ainda não aparecer:
+→ No Render, vá em Settings → "Clear build cache"
+→ Depois faça "Manual Deploy" novamente
+→ Limpe o cache do navegador novamente
+
