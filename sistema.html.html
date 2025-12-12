@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agente Financeiro • Microkids</title>
-  <!-- Versão corrigida: 2025-01-08 - syncFromBackend revertido para comportamento original -->
+  <!-- Versão FINAL: 2025-01-08 15:30 - Botão Enviar Planilha adicionado, API_BASE corrigido -->
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -558,46 +558,58 @@
     const originalText = btnSync.innerHTML;
     
     try {
-      console.log('🔄 Iniciando sincronização...');
+      console.log('🔄 Atualizando dados do banco...');
       // Desabilita o botão e mostra loading
       btnSync.disabled = true;
-      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...';
+      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';
       
-      console.log(`📡 Chamando: ${API_BASE}/finance/sync`);
-      const res = await fetch(`${API_BASE}/finance/sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // Apenas recarrega os dados do banco (não tenta ler Excel local no Render)
+      // No Render, use o botão "Enviar Planilha" para fazer upload
+      await loadTransactions();
+      await loadSummary();
+      updateAll();
       
-      console.log(`📥 Resposta recebida: status ${res.status}`);
+      console.log('✅ Dados atualizados com sucesso!');
       
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`HTTP ${res.status}: ${errorText}`);
-      }
+      // Mostra mensagem de sucesso discreta
+      btnSync.innerHTML = '<i class="fa-solid fa-check"></i> Atualizado!';
+      setTimeout(() => {
+        btnSync.innerHTML = originalText;
+      }, 2000);
       
-      const data = await res.json();
-      console.log('📊 Dados recebidos:', data);
-      
-      if (data.success) {
-        alert(`✅ Sincronização concluída!\n\n${data.imported} transações importadas.`);
-        // Recarrega os dados
-        await loadTransactions();
-        await loadSummary();
-        updateAll();
-      } else {
-        alert(`❌ Erro na sincronização:\n\n${data.message || data.error || 'Erro desconhecido'}`);
-      }
     } catch (err) {
       console.error('[syncFromBackend] Erro completo:', err);
       const errorMsg = err.message || 'Erro desconhecido';
-      alert(`❌ Erro ao sincronizar:\n\n${errorMsg}\n\nVerifique:\n1. Se o servidor está rodando na porta 4000\n2. Se o arquivo Excel está no caminho correto\n3. Abra o console (F12) para mais detalhes`);
+      
+      // Mensagem mais amigável
+      let userMessage = '❌ Erro ao atualizar dados:\n\n';
+      
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+        userMessage += 'Não foi possível conectar com o servidor.\n\n';
+        userMessage += 'Possíveis causas:\n';
+        userMessage += '• Backend está inativo (free tier do Render)\n';
+        userMessage += '• Aguarde 30-60 segundos e tente novamente\n';
+        userMessage += '• Verifique se o backend está online\n\n';
+      } else if (errorMsg.includes('HTTP 500')) {
+        userMessage += 'Erro no servidor (500).\n\n';
+        userMessage += 'O backend pode estar com problemas.\n';
+        userMessage += 'Verifique os logs do backend no Render.\n\n';
+      } else if (errorMsg.includes('HTTP 404')) {
+        userMessage += 'Endpoint não encontrado (404).\n\n';
+        userMessage += 'Verifique se o backend está atualizado.\n\n';
+      } else {
+        userMessage += errorMsg + '\n\n';
+      }
+      
+      userMessage += '💡 DICA: Use o botão "Enviar Planilha" para fazer upload de uma nova planilha Excel.';
+      
+      alert(userMessage);
     } finally {
       // Reabilita o botão
       btnSync.disabled = false;
-      btnSync.innerHTML = originalText;
+      if (!btnSync.innerHTML.includes('Atualizado!')) {
+        btnSync.innerHTML = originalText;
+      }
     }
   }
 
