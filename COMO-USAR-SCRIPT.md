@@ -54,3 +54,4 @@ Após fazer tudo:
 3. Clique e depois faça **"Manual Deploy"** novamente
 4. Aguarde e limpe o cache do navegador novamente
 
+

@@ -58,3 +58,4 @@ Write-Host "3. Clique em 'Manual Deploy' → 'Deploy latest commit'" -Foreground
 Write-Host "4. Aguarde 2-5 minutos" -ForegroundColor White
 Write-Host "5. Limpe o cache do navegador (Ctrl + Shift + Delete)" -ForegroundColor White
 
+
