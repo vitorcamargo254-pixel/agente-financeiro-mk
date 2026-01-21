@@ -441,19 +441,25 @@
     return { receitas, despesas, saldo: receitas - despesas };
   }
 
-  function applyFilterPipeline(data, {term='', status='', category=''}){
+  function applyFilterPipeline(data, {term='', status='', category='', categoryLabel=''}){
     const t = normalize(term);
     const cat = String(category || '').trim();
+    const catLabel = String(categoryLabel || '').trim();
     return (data||[]).filter(item => {
       const matchesTerm = !t || normalize(item.description).includes(t) || normalize(item.vendor).includes(t);
       const matchesStatus = !status || String(item.status) === String(status);
       const itemCategory = String(item.category || '').trim();
+      const itemCategoryNorm = normalize(itemCategory);
+      const catNorm = normalize(cat);
+      const catLabelNorm = normalize(catLabel);
       const matchesCategory =
         !cat ||
         itemCategory === cat ||
         itemCategory.startsWith(`${cat} `) ||
         itemCategory.startsWith(`${cat}-`) ||
-        itemCategory.startsWith(`${cat} -`);
+        itemCategory.startsWith(`${cat} -`) ||
+        (catNorm && itemCategoryNorm.includes(catNorm)) ||
+        (catLabelNorm && itemCategoryNorm.includes(catLabelNorm));
       return matchesTerm && matchesStatus && matchesCategory;
     });
   }
@@ -677,8 +683,10 @@
   function applyFilters(){
     const term = document.getElementById('search-input').value || '';
     const status = document.getElementById('status-filter').value || '';
-    const category = document.getElementById('category-filter').value || '';
-    filteredData = applyFilterPipeline(financialData, { term, status, category });
+    const categorySelect = document.getElementById('category-filter');
+    const category = categorySelect.value || '';
+    const categoryLabel = categorySelect.options[categorySelect.selectedIndex]?.text || '';
+    filteredData = applyFilterPipeline(financialData, { term, status, category, categoryLabel });
     updateAll();
   }
 
