@@ -437,10 +437,17 @@
 
   function applyFilterPipeline(data, {term='', status='', category=''}){
     const t = normalize(term);
+    const cat = String(category || '').trim();
     return (data||[]).filter(item => {
       const matchesTerm = !t || normalize(item.description).includes(t) || normalize(item.vendor).includes(t);
       const matchesStatus = !status || String(item.status) === String(status);
-      const matchesCategory = !category || String(item.category) === String(category);
+      const itemCategory = String(item.category || '').trim();
+      const matchesCategory =
+        !cat ||
+        itemCategory === cat ||
+        itemCategory.startsWith(`${cat} `) ||
+        itemCategory.startsWith(`${cat}-`) ||
+        itemCategory.startsWith(`${cat} -`);
       return matchesTerm && matchesStatus && matchesCategory;
     });
   }
