@@ -26,6 +26,12 @@ export class EmailService {
       });
 
       this.logger.log('✅ Serviço de e-mail inicializado');
+      this.transporter
+        .verify()
+        .then(() => this.logger.log('✅ Verificação SMTP concluída com sucesso'))
+        .catch((error) =>
+          this.logger.error(`❌ Falha na verificação SMTP: ${error.message}`, error),
+        );
     } else {
       this.logger.warn('⚠️ E-mail não configurado. Configure EMAIL_HOST, EMAIL_USER e EMAIL_PASSWORD no .env');
     }
@@ -145,4 +151,6 @@ export class EmailService {
     return await this.sendEmail(to, titulo, html);
   }
 }
+
+
 

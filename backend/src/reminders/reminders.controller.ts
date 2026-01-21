@@ -25,6 +25,11 @@ export class RemindersController {
     return await this.remindersService.processReminders();
   }
 
+  @Post('test-email')
+  async testEmail(@Body('to') to: string) {
+    return await this.remindersService.sendTestEmail(to);
+  }
+
   @Get('logs')
   async getLogs(@Query('limit') limit?: string) {
     return await this.remindersService.getLogs(limit ? parseInt(limit, 10) : 50);

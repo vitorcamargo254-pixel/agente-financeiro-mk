@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agente Financeiro • Microkids</title>
-  <!-- Versão: 2025-01-08-16-20 - Botão Upload entre Limpar e Sincronizar - FORÇA ATUALIZAÇÃO -->
+  <!-- Versão: 2025-01-19 - Botão Upload apenas (Sincronizar removido) -->
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -85,13 +85,14 @@
               <option value="">Todas</option><option value="10">10 - Retiradas Mensais</option><option value="13">13 - Terceirizados</option><option value="20">20 - Desp. ADM</option><option value="30">30 - Impostos</option>
             </select>
           </div>
-          <div class="flex gap-2">
-            <button id="btn-clear" class="px-4 py-2 bg-gray-200 rounded-lg">Limpar</button>
-            <label for="file-upload" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition flex items-center gap-2">
-              <i class="fa-solid fa-upload"></i> Enviar Planilha
+          <div class="flex gap-2 flex-wrap">
+            <button id="btn-clear" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+              <i class="fa-solid fa-eraser mr-2"></i>Limpar
+            </button>
+            <label for="file-upload" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition flex items-center gap-2 shadow-md">
+              <i class="fa-solid fa-upload mr-2"></i> Upload Planilha
             </label>
             <input type="file" id="file-upload" accept=".xlsx,.xls,.xlsm" class="hidden" />
-            <button id="btn-sync" class="px-4 py-2 bg-indigo-600 text-white rounded-lg" aria-label="Sincronizar dados do servidor"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
           </div>
         </div>
       </div>
@@ -286,9 +287,14 @@
               </label>
             </div>
             
-            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-              <i class="fa-solid fa-save mr-2"></i>Salvar Configurações
-            </button>
+            <div class="flex flex-wrap gap-3">
+              <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                <i class="fa-solid fa-save mr-2"></i>Salvar Configurações
+              </button>
+              <button type="button" id="btn-test-email" class="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition">
+                <i class="fa-solid fa-paper-plane mr-2"></i>Testar E-mail
+              </button>
+            </div>
           </form>
         </div>
         
@@ -520,7 +526,7 @@
       financialData = [];
       filteredData = [];
       updateAll();
-      throw err; // Re-lança o erro para ser capturado pelo syncFromBackend
+      throw err; // Re-lança o erro
     }
   }
 
@@ -543,92 +549,10 @@
       document.getElementById('total-receitas').textContent = BRL.format(0);
       document.getElementById('total-despesas').textContent = BRL.format(0);
       document.getElementById('saldo-liquido').textContent = BRL.format(0);
-      throw err; // Re-lança o erro para ser capturado pelo syncFromBackend
+      throw err; // Re-lança o erro
     }
   }
 
-  async function syncFromBackend(){
-    const btnSync = document.getElementById('btn-sync');
-    if (!btnSync) {
-      console.error('Botão btn-sync não encontrado!');
-      alert('Erro: Botão de sincronização não encontrado.');
-      return;
-    }
-    
-    const originalText = btnSync.innerHTML;
-    
-    try {
-      console.log('🔄 Atualizando dados do banco...');
-      console.log(`🌐 API_BASE: ${API_BASE}`);
-      
-      // Desabilita o botão e mostra loading
-      btnSync.disabled = true;
-      btnSync.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';
-      
-      // Testa conexão com backend primeiro
-      try {
-        const healthCheck = await fetch(`${API_BASE}/health`, { 
-          method: 'GET',
-          signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
-        });
-        if (healthCheck.ok) {
-          console.log('✅ Backend está online!');
-        } else {
-          console.warn('⚠️ Backend respondeu com erro:', healthCheck.status);
-        }
-      } catch (healthErr) {
-        console.warn('⚠️ Backend pode estar inativo (free tier):', healthErr.message);
-        // Continua mesmo assim, pode ser que o backend esteja "spinning up"
-      }
-      
-      // Apenas recarrega os dados do banco (não tenta ler Excel local)
-      await loadTransactions();
-      await loadSummary();
-      updateAll();
-      
-      console.log('✅ Dados atualizados com sucesso!');
-      
-      // Mostra mensagem de sucesso discreta
-      btnSync.innerHTML = '<i class="fa-solid fa-check"></i> Atualizado!';
-      setTimeout(() => {
-        btnSync.innerHTML = originalText;
-      }, 2000);
-      
-    } catch (err) {
-      console.error('[syncFromBackend] Erro completo:', err);
-      const errorMsg = err.message || 'Erro desconhecido';
-      
-      // Mensagem mais amigável
-      let userMessage = '❌ Erro ao atualizar dados:\n\n';
-      
-      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        userMessage += 'Não foi possível conectar com o servidor.\n\n';
-        userMessage += 'Possíveis causas:\n';
-        userMessage += '• Backend está inativo (free tier do Render)\n';
-        userMessage += '• Aguarde 30-60 segundos e tente novamente\n';
-        userMessage += '• Verifique se o backend está online\n\n';
-      } else if (errorMsg.includes('HTTP 500')) {
-        userMessage += 'Erro no servidor (500).\n\n';
-        userMessage += 'O backend pode estar com problemas.\n';
-        userMessage += 'Verifique os logs do backend no Render.\n\n';
-      } else if (errorMsg.includes('HTTP 404')) {
-        userMessage += 'Endpoint não encontrado (404).\n\n';
-        userMessage += 'Verifique se o backend está atualizado.\n\n';
-      } else {
-        userMessage += errorMsg + '\n\n';
-      }
-      
-      userMessage += 'Abra o console (F12) para mais detalhes.';
-      
-      alert(userMessage);
-    } finally {
-      // Reabilita o botão
-      btnSync.disabled = false;
-      if (!btnSync.innerHTML.includes('Atualizado!')) {
-        btnSync.innerHTML = originalText;
-      }
-    }
-  }
 
   function renderTable(rows){
     const tbody = document.getElementById('transactions-table');
@@ -872,12 +796,11 @@
     document.getElementById('status-filter').addEventListener('change', applyFilters);
     document.getElementById('category-filter').addEventListener('change', applyFilters);
     document.getElementById('btn-clear').addEventListener('click', () => { document.getElementById('search-input').value=''; document.getElementById('status-filter').value=''; document.getElementById('category-filter').value=''; filteredData = [...financialData]; updateAll(); });
-    document.getElementById('btn-sync').addEventListener('click', syncFromBackend);
     
     // Upload de planilha Excel
     const fileUpload = document.getElementById('file-upload');
     fileUpload.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       
       // Valida extensão
@@ -890,14 +813,15 @@
       const formData = new FormData();
       formData.append('file', file);
       
-      const btnUpload = fileUpload.previousElementSibling;
+      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
       const originalText = btnUpload.innerHTML;
       
       try {
         btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
         btnUpload.style.pointerEvents = 'none';
+        btnUpload.style.opacity = '0.7';
         
-        console.log(`📤 Enviando arquivo: ${file.name}`);
+        console.log(`📤 Enviando arquivo: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
         const res = await fetch(`${API_BASE}/finance/upload`, {
           method: 'POST',
           body: formData,
@@ -906,10 +830,13 @@
         const data = await res.json();
         
         if (!res.ok || !data.success) {
-          throw new Error(data.message || data.error || `Erro HTTP ${res.status}`);
+          const errorMsg = data.message || data.error || `Erro HTTP ${res.status}`;
+          console.error('[Upload] Erro do servidor:', data);
+          throw new Error(errorMsg);
         }
         
-        alert(`✅ Planilha enviada e sincronizada com sucesso!\n\n${data.imported} transações importadas.`);
+        console.log(`✅ Upload bem-sucedido: ${data.imported} transações importadas`);
+        alert(`✅ Planilha enviada e sincronizada com sucesso!\n\n📊 ${data.imported} transações importadas.\n\nA página será atualizada automaticamente.`);
         
         // Recarrega os dados
         await loadTransactions();
@@ -917,13 +844,15 @@
         updateAll();
         
         // Limpa o input
-        e.target.value = '';
-      } catch (err) {
-        console.error('[Upload] Erro:', err);
-        alert(`❌ Erro ao enviar planilha:\n\n${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
+        (e.target as HTMLInputElement).value = '';
+      } catch (err: any) {
+        console.error('[Upload] Erro completo:', err);
+        const errorMsg = err.message || 'Erro desconhecido';
+        alert(`❌ Erro ao enviar planilha:\n\n${errorMsg}\n\n💡 Dica: Verifique se o arquivo está no formato correto (.xlsx, .xls ou .xlsm)\n\nAbra o console (F12) para mais detalhes.`);
       } finally {
         btnUpload.innerHTML = originalText;
         btnUpload.style.pointerEvents = 'auto';
+        btnUpload.style.opacity = '1';
       }
     });
 
@@ -1180,6 +1109,41 @@
       }
     }
     
+    async function testReminderEmail() {
+      const btn = document.getElementById('btn-test-email');
+      const originalText = btn.innerHTML;
+      const email = (document.getElementById('config-email') as HTMLInputElement).value.trim();
+      
+      if (!email) {
+        alert('❌ Informe um e-mail para testar o envio.');
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Testando...';
+      
+      try {
+        const res = await fetch(`${API_BASE}/reminders/test-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: email }),
+        });
+        
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          throw new Error(result.error || `HTTP ${res.status}`);
+        }
+        
+        alert(`✅ E-mail de teste enviado para ${email}`);
+      } catch (err: any) {
+        console.error('[Lembretes] Erro ao testar e-mail:', err);
+        alert(`❌ Erro ao enviar e-mail de teste: ${err.message || 'Erro desconhecido'}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
     async function processReminders() {
       const btn = document.getElementById('btn-process-reminders');
       const originalText = btn.innerHTML;
@@ -1193,8 +1157,11 @@
         
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const result = await res.json();
+        const errorList = result.errors?.length
+          ? `\n\nErros:\n- ${result.errors.join('\n- ')}`
+          : '';
         
-        alert(`✅ Lembretes processados!\n\nTransações: ${result.processed}\nE-mails: ${result.emailsSent}\nLigações: ${result.callsMade}`);
+        alert(`✅ Lembretes processados!\n\nTransações: ${result.processed}\nE-mails: ${result.emailsSent}\nLigações: ${result.callsMade}${errorList}`);
         
         await loadUpcomingTransactions();
         await loadReminderLogs();
@@ -1214,6 +1181,7 @@
     });
     
     document.getElementById('btn-process-reminders').addEventListener('click', processReminders);
+    document.getElementById('btn-test-email').addEventListener('click', testReminderEmail);
     
     // Carregar dados quando a aba for aberta
     const tabLembretes = document.getElementById('tab-lembretes');

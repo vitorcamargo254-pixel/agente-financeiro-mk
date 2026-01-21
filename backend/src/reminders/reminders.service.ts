@@ -218,6 +218,23 @@ export class RemindersService {
   }
 
   /**
+   * Envia um e-mail de teste para validar a configuração SMTP
+   */
+  async sendTestEmail(to: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (!to) {
+      throw new Error('E-mail de destino não informado');
+    }
+
+    const html = `
+      <h2>✅ Teste de e-mail - Microkids</h2>
+      <p>Este é um e-mail de teste enviado pelo sistema financeiro Microkids.</p>
+      <p>Se você recebeu, a configuração SMTP está correta.</p>
+    `;
+
+    return await this.emailService.sendEmail(to, 'Teste de e-mail - Microkids', html);
+  }
+
+  /**
    * Busca ou cria configuração de lembretes
    */
   async getConfig() {
