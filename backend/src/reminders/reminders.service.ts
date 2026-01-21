@@ -30,7 +30,9 @@ export class RemindersService {
 
     // Busca todas as transações pendentes
     const allTransactions = await this.financeService.findAll(1, 10000);
-    const pendentes = allTransactions.items.filter((t) => t.status === 'pendente');
+    const pendentes = allTransactions.items.filter(
+      (t) => (t.status || '').toString().toLowerCase() === 'pendente',
+    );
 
     const upcoming: Array<{
       transaction: any;
@@ -68,6 +70,16 @@ export class RemindersService {
     emailsSent: number;
     callsMade: number;
     errors: string[];
+    debug?: {
+      diasAntes: number[];
+      pendentesCount: number;
+      amostras: Array<{
+        descricao: string;
+        data: string;
+        diasRestantes: number;
+        status: string;
+      }>;
+    };
   }> {
     this.logger.log('🔄 Processando lembretes...');
 
@@ -96,6 +108,47 @@ export class RemindersService {
 
     // Busca transações próximas do vencimento
     const upcoming = await this.getUpcomingTransactions(diasAntes);
+
+    // Debug quando não encontra transações elegíveis
+    let debug: {
+      diasAntes: number[];
+      pendentesCount: number;
+      amostras: Array<{
+        descricao: string;
+        data: string;
+        diasRestantes: number;
+        status: string;
+      }>;
+    } | undefined;
+
+    if (upcoming.length === 0) {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const allTransactions = await this.financeService.findAll(1, 10000);
+      const pendentes = allTransactions.items.filter(
+        (t) => (t.status || '').toString().toLowerCase() === 'pendente',
+      );
+
+      const amostras = pendentes.slice(0, 5).map((t) => {
+        const dataVencimento = new Date(t.data);
+        dataVencimento.setHours(0, 0, 0, 0);
+        const diffTime = dataVencimento.getTime() - hoje.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return {
+          descricao: t.descricao,
+          data: new Date(t.data).toISOString().split('T')[0],
+          diasRestantes: diffDays,
+          status: t.status,
+        };
+      });
+
+      debug = {
+        diasAntes,
+        pendentesCount: pendentes.length,
+        amostras,
+      };
+      this.logger.log(`🔎 Debug lembretes: ${JSON.stringify(debug)}`);
+    }
 
     this.logger.log(`📊 Encontradas ${upcoming.length} transações para lembrar`);
 
@@ -214,6 +267,7 @@ export class RemindersService {
       emailsSent,
       callsMade,
       errors,
+      debug,
     };
   }
 

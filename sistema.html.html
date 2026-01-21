@@ -1161,8 +1161,11 @@
         const errorList = result.errors?.length
           ? `\n\nErros:\n- ${result.errors.join('\n- ')}`
           : '';
+        const debugInfo = result.debug
+          ? `\n\nDebug:\n- Dias antes: ${result.debug.diasAntes.join(',')}\n- Pendentes: ${result.debug.pendentesCount}\n- Amostras: ${result.debug.amostras.map(a => `${a.descricao} (${a.data}) => ${a.diasRestantes} dias`).join('; ') || 'nenhuma'}`
+          : '';
         
-        alert(`✅ Lembretes processados!\n\nTransações: ${result.processed}\nE-mails: ${result.emailsSent}\nLigações: ${result.callsMade}${errorList}`);
+        alert(`✅ Lembretes processados!\n\nTransações: ${result.processed}\nE-mails: ${result.emailsSent}\nLigações: ${result.callsMade}${errorList}${debugInfo}`);
         
         await loadUpcomingTransactions();
         await loadReminderLogs();
