@@ -441,27 +441,36 @@
     return { receitas, despesas, saldo: receitas - despesas };
   }
 
-  function applyFilterPipeline(data, {term='', status='', category='', categoryLabel=''}){
+  function applyFilterPipeline(data, {term='', status='', category=''}){
     const t = normalize(term);
     const cat = String(category || '').trim();
-    const catLabel = String(categoryLabel || '').trim();
     return (data||[]).filter(item => {
       const matchesTerm = !t || normalize(item.description).includes(t) || normalize(item.vendor).includes(t);
       const matchesStatus = !status || String(item.status) === String(status);
       const itemCategory = String(item.category || '').trim();
       const itemCategoryNorm = normalize(itemCategory);
       const catNorm = normalize(cat);
-      const catLabelNorm = normalize(catLabel);
       const matchesCategory =
-        !cat ||
-        itemCategory === cat ||
-        itemCategory.startsWith(`${cat} `) ||
-        itemCategory.startsWith(`${cat}-`) ||
-        itemCategory.startsWith(`${cat} -`) ||
-        (catNorm && itemCategoryNorm.includes(catNorm)) ||
-        (catLabelNorm && itemCategoryNorm.includes(catLabelNorm));
+        !cat || (catNorm && itemCategoryNorm === catNorm);
       return matchesTerm && matchesStatus && matchesCategory;
     });
+  }
+
+  function updateCategoryOptions(items){
+    const select = document.getElementById('category-filter');
+    if (!select) return;
+    const previous = select.value || '';
+    const categories = Array.from(
+      new Set((items || []).map(x => String(x.category || '').trim()).filter(Boolean))
+    ).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+    select.innerHTML = `<option value="">Todas</option>` + categories
+      .map(cat => `<option value="${cat}">${cat}</option>`)
+      .join('');
+    if (previous && categories.includes(previous)) {
+      select.value = previous;
+    } else {
+      select.value = '';
+    }
   }
 
   let financialData = []; // Agora vazio, será preenchido pelo backend
@@ -527,6 +536,7 @@
       // Mantém a ordem original do Excel (não ordena)
       // A ordem já vem correta do backend
 
+      updateCategoryOptions(financialData);
       filteredData = [...financialData];
       updateAll();
       
@@ -683,10 +693,8 @@
   function applyFilters(){
     const term = document.getElementById('search-input').value || '';
     const status = document.getElementById('status-filter').value || '';
-    const categorySelect = document.getElementById('category-filter');
-    const category = categorySelect.value || '';
-    const categoryLabel = categorySelect.options[categorySelect.selectedIndex]?.text || '';
-    filteredData = applyFilterPipeline(financialData, { term, status, category, categoryLabel });
+    const category = document.getElementById('category-filter').value || '';
+    filteredData = applyFilterPipeline(financialData, { term, status, category });
     updateAll();
   }
 
