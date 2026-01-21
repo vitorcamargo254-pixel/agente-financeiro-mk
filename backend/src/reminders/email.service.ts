@@ -12,8 +12,10 @@ export class EmailService {
   constructor(private readonly config: ConfigService) {
     const sendGridApiKey = this.config.get<string>('SENDGRID_API_KEY');
     const emailProvider = this.config.get<string>('EMAIL_PROVIDER');
+    const shouldUseSendGrid =
+      !!sendGridApiKey && (!emailProvider || emailProvider.toLowerCase() === 'sendgrid');
 
-    if (sendGridApiKey && emailProvider === 'sendgrid') {
+    if (shouldUseSendGrid) {
       sgMail.setApiKey(sendGridApiKey);
       this.useSendGridApi = true;
       this.logger.log('✅ SendGrid API configurado para envio de e-mail');
