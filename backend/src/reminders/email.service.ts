@@ -10,6 +10,8 @@ export class EmailService {
   constructor(private readonly config: ConfigService) {
     const emailHost = this.config.get<string>('EMAIL_HOST');
     const emailPort = this.config.get<number>('EMAIL_PORT', 587);
+    const emailSecureEnv = this.config.get<string>('EMAIL_SECURE');
+    const emailSecure = emailSecureEnv ? emailSecureEnv === 'true' : emailPort === 465;
     const emailUser = this.config.get<string>('EMAIL_USER');
     const emailPass = this.config.get<string>('EMAIL_PASSWORD');
     const emailFrom = this.config.get<string>('EMAIL_FROM') || emailUser;
@@ -18,10 +20,16 @@ export class EmailService {
       this.transporter = nodemailer.createTransport({
         host: emailHost,
         port: emailPort,
-        secure: emailPort === 465, // true para 465, false para outras portas
+        secure: emailSecure, // true para 465, false para 587
         auth: {
           user: emailUser,
           pass: emailPass,
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+        tls: {
+          servername: emailHost,
         },
       });
 
