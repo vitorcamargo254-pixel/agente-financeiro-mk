@@ -800,7 +800,7 @@
     // Upload de planilha Excel
     const fileUpload = document.getElementById('file-upload');
     fileUpload.addEventListener('change', async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = e.target && e.target.files ? e.target.files[0] : null;
       if (!file) return;
       
       // Valida extensão
@@ -813,7 +813,7 @@
       const formData = new FormData();
       formData.append('file', file);
       
-      const btnUpload = fileUpload.previousElementSibling as HTMLElement;
+      const btnUpload = fileUpload.previousElementSibling;
       const originalText = btnUpload.innerHTML;
       
       try {
@@ -844,8 +844,8 @@
         updateAll();
         
         // Limpa o input
-        (e.target as HTMLInputElement).value = '';
-      } catch (err: any) {
+        e.target.value = '';
+      } catch (err) {
         console.error('[Upload] Erro completo:', err);
         const errorMsg = err.message || 'Erro desconhecido';
         alert(`❌ Erro ao enviar planilha:\n\n${errorMsg}\n\n💡 Dica: Verifique se o arquivo está no formato correto (.xlsx, .xls ou .xlsm)\n\nAbra o console (F12) para mais detalhes.`);
@@ -1112,7 +1112,8 @@
     async function testReminderEmail() {
       const btn = document.getElementById('btn-test-email');
       const originalText = btn.innerHTML;
-      const email = (document.getElementById('config-email') as HTMLInputElement).value.trim();
+      const emailInput = document.getElementById('config-email');
+      const email = emailInput ? emailInput.value.trim() : '';
       
       if (!email) {
         alert('❌ Informe um e-mail para testar o envio.');
@@ -1135,7 +1136,7 @@
         }
         
         alert(`✅ E-mail de teste enviado para ${email}`);
-      } catch (err: any) {
+      } catch (err) {
         console.error('[Lembretes] Erro ao testar e-mail:', err);
         alert(`❌ Erro ao enviar e-mail de teste: ${err.message || 'Erro desconhecido'}`);
       } finally {
