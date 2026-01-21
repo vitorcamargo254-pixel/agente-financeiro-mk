@@ -1,13 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as sgMail from '@sendgrid/mail';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
+  private useSendGridApi = false;
 
   constructor(private readonly config: ConfigService) {
+    const sendGridApiKey = this.config.get<string>('SENDGRID_API_KEY');
+    const emailProvider = this.config.get<string>('EMAIL_PROVIDER');
+
+    if (sendGridApiKey && emailProvider === 'sendgrid') {
+      sgMail.setApiKey(sendGridApiKey);
+      this.useSendGridApi = true;
+      this.logger.log('✅ SendGrid API configurado para envio de e-mail');
+      return;
+    }
+
     const emailHost = this.config.get<string>('EMAIL_HOST');
     const emailPort = this.config.get<number>('EMAIL_PORT', 587);
     const emailSecureEnv = this.config.get<string>('EMAIL_SECURE');
@@ -51,6 +63,33 @@ export class EmailService {
     html: string,
     text?: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (this.useSendGridApi) {
+      try {
+        const emailFrom = this.config.get<string>('EMAIL_FROM');
+        if (!emailFrom) {
+          throw new Error('EMAIL_FROM não configurado');
+        }
+
+        const result = await sgMail.send({
+          to,
+          from: emailFrom,
+          subject,
+          text: text || html.replace(/<[^>]*>/g, ''),
+          html,
+        });
+
+        const messageId = result?.[0]?.headers?.['x-message-id'];
+        this.logger.log(`✅ E-mail enviado via SendGrid para ${to}: ${messageId || 'ok'}`);
+        return { success: true, messageId };
+      } catch (error) {
+        this.logger.error(`❌ Erro ao enviar via SendGrid: ${error.message}`, error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+    }
+
     if (!this.transporter) {
       return {
         success: false,
