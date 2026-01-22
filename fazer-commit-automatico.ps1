@@ -64,3 +64,4 @@ Write-Host "5. Limpe o cache do navegador (Ctrl + Shift + Delete)" -ForegroundCo
 
 
 
+
